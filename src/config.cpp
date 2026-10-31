@@ -50,7 +50,7 @@ bool Config::load(const QByteArray &data, QString *error) {
     }
     if (next.isEmpty()) return fail("Каталог пуст");
     int context = root.value("fitContext").toInt(8192);
-    if (context < 1) return fail("Размер контекста должен быть больше нуля");
+    if (context < 0) return fail("Размер контекста fit не может быть отрицательным; 0 — автоматический выбор до максимума модели.");
     parameters = next; metadata = root; directory = root.value("llamaDirectory").toString(); fitContext = context;
     std::stable_sort(parameters.begin(), parameters.end(), [](const Parameter &a, const Parameter &b) { return a.priority < b.priority; });
     return true;
@@ -114,7 +114,7 @@ bool Config::applyFit(const QString &output, QString *error) {
         auto p = next.find(args[i]);
         if (!p || !allowed.contains(p->name) || i + 1 >= args.size()) { if (error) *error = "Неподдерживаемый вывод fit: " + line; return false; }
         QString value = args[i + 1];
-        if (p->type == DataType::Integer) { bool ok; int n = value.toInt(&ok); if (!ok || n < 1) { if (error) *error = "Неверный контекст fit"; return false; } p->value = n; }
+        if (p->type == DataType::Integer) { bool ok; int n = value.toInt(&ok); if (!ok || n < 0) { if (error) *error = "Неверный контекст fit"; return false; } p->value = n; }
         else p->value = value;
         p->enabled = true; seen.insert(p->name);
     }

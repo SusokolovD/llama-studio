@@ -1,6 +1,7 @@
 #pragma once
 #include "config.h"
 #include "releasechecker.h"
+#include "managedprocess.h"
 #include <QMainWindow>
 #include <QProcess>
 #include <QNetworkAccessManager>
@@ -25,7 +26,7 @@ protected:
 private:
     friend class GuiTest;
     Config config;
-    QProcess server, fit;
+    ManagedProcess server, fit;
     QNetworkAccessManager network;
     ReleaseChecker releases;
     QTimer healthTimer;
@@ -40,6 +41,7 @@ private:
     QWidget *editor;
     BuilderPage *buildPage=nullptr;
     bool closeAfterBuild=false;
+    bool closeConfirmed=false,closeQuestionOpen=false;
     QByteArray fitOutput, serverPending, serverErrorPending, fitPending, fitErrorPending;
     QUrl runningUrl;
     QByteArray runningKey;

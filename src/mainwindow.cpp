@@ -2,6 +2,7 @@
 #include "advisordialog.h"
 #include "builderpage.h"
 #include "version.h"
+#include "studiobutton.h"
 #include <QtWidgets>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -16,7 +17,7 @@ QString groupLabel(const QString &group) {
 }
 bool modelField(const QString &s) { return QStringList{"--model", "--mmproj", "--spec-draft-model", "--lora", "--lora-scaled", "--control-vector", "--control-vector-scaled", "--models-dir", "--models-preset"}.contains(s); }
 QPushButton *button(const QString &text, QLayout *layout, const QString &name = {}) {
-    auto b = new QPushButton(text); b->setObjectName(name); layout->addWidget(b); return b;
+    auto b = new StudioButton(text); b->setObjectName(name); layout->addWidget(b); return b;
 }
 }
 MainWindow::MainWindow(QWidget *parent, bool checkUpdatesOnStartup) : QMainWindow(parent) {
@@ -123,7 +124,7 @@ void MainWindow::buildUi() {
     connect(buildPage,&BuilderPage::startRequested,this,[this]{if(server.state()!=QProcess::NotRunning||fit.state()!=QProcess::NotRunning){error("Остановите сервер и fit перед обновлением бинарников.");return;}buildPage->start();});
     connect(buildPage,&BuilderPage::busyChanged,this,[this](bool busy){directory->setEnabled(!busy);updateButtons();if(!busy&&closeAfterBuild)QTimer::singleShot(0,this,&QWidget::close);});
     connect(buildPage,&BuilderPage::deployed,this,[this](const QString &path){directory->setText(path);status->setText("llama.cpp обновлён");});
-    auto bottom = new QHBoxLayout; bottom->addWidget(new QLabel("Контекст для fit:")); context = new QSpinBox; context->setRange(1, 2147483647); context->setValue(config.fitContext); context->setSingleStep(1024); bottom->addWidget(context);
+    auto bottom = new QHBoxLayout; bottom->addWidget(new QLabel("Контекст для fit:")); context = new QSpinBox; context->setRange(0, 2147483647);context->setSpecialValueText("0 — авто / максимум модели");context->setToolTip("0 передаёт --ctx-size 0: fit выбирает контекст до предела модели с учётом памяти. Для фиксированного контекста задайте положительное число."); context->setValue(config.fitContext); context->setSingleStep(1024); bottom->addWidget(context);
     connect(context, qOverload<int>(&QSpinBox::valueChanged), this, [this](int n) { config.fitContext = n; });
     fitButton = button("Подобрать параметры", bottom); fitButton->setToolTip("Подбор размещения в памяти для указанного контекста. Не измеряет скорость. Дополнительные модели могут потребовать отдельный запас памяти.");
     cancelFitButton = button("Отменить fit", bottom); bottom->addStretch();
@@ -311,7 +312,7 @@ void MainWindow::launchFit() {
 void MainWindow::stop(QProcess &process) {
     if (process.state() == QProcess::NotRunning) return;
     process.terminate(); auto ptr = &process; quint64 run = ptr == &server ? serverRun : fitRun;
-    QTimer::singleShot(5000, this, [this, ptr, run] { if (run == (ptr == &server ? serverRun : fitRun) && ptr->state() != QProcess::NotRunning) ptr->kill(); });
+    QTimer::singleShot(5000, this, [this, ptr, run] { if (run == (ptr == &server ? serverRun : fitRun) && ptr->state() != QProcess::NotRunning)static_cast<ManagedProcess*>(ptr)->killTree(); });
 }
 void MainWindow::pollHealth() {
     if (healthPending || server.state() != QProcess::Running || stopping) return;
@@ -329,12 +330,19 @@ void MainWindow::pollHealth() {
     });
 }
 void MainWindow::closeEvent(QCloseEvent *event) {
+    if(closeQuestionOpen){event->ignore();return;}
+    if(!closeConfirmed){
+        closeQuestionOpen=true;
+        QMessageBox question(QMessageBox::Question,"Завершить работу","Закрыть Llama Studio? Сервер и fit будут остановлены, модель выгружена, активная сборка отменена.",QMessageBox::NoButton,this);question.setObjectName("exitConfirmation");
+        auto yes=new StudioButton("Да");yes->setObjectName("exitYes");auto no=new StudioButton("Нет");no->setObjectName("exitNo");question.addButton(yes,QMessageBox::YesRole);question.addButton(no,QMessageBox::NoRole);question.setDefaultButton(no);question.setEscapeButton(no);question.exec();closeQuestionOpen=false;
+        if(question.clickedButton()!=yes){event->ignore();return;}
+        closeConfirmed=true;stopping=true;fitCanceled=true;healthTimer.stop();centralWidget()->setEnabled(false);
+    }
     if(buildPage->busy()){closeAfterBuild=true;buildPage->cancel();event->ignore();return;}
     if (server.state() != QProcess::NotRunning || fit.state() != QProcess::NotRunning) {
-        if (QMessageBox::question(this, "Завершить работу", "Остановить запущенные процессы и закрыть приложение?") != QMessageBox::Yes) { event->ignore(); return; }
-        healthTimer.stop();
-        for (auto p : {&server, &fit}) if (p->state() != QProcess::NotRunning) { p->kill(); p->waitForFinished(3000); }
+        server.killTree();fit.killTree();event->ignore();QTimer::singleShot(50,this,&QWidget::close);return;
     }
+    server.killTree();fit.killTree();
     event->accept();
 }
 bool MainWindow::smokeTest(const QString &screenshot) {

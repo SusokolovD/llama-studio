@@ -1,3 +1,4 @@
+#include "studiobutton.h"
 #include "advisordialog.h"
 #include <QtWidgets>
 AdvisorDialog::AdvisorDialog(const Config &config,QWidget *parent):QDialog(parent),config(config) {
@@ -9,9 +10,9 @@ AdvisorDialog::AdvisorDialog(const Config &config,QWidget *parent):QDialog(paren
     auto modelRow=new QHBoxLayout; path=new QLineEdit;
     if(auto p=config.find("--model"))path->setText(p->value.toString());
     path->setPlaceholderText("Файл GGUF для анализа метаданных"); modelRow->addWidget(path,1);
-    auto browse=new QPushButton("…"); modelRow->addWidget(browse); left->addLayout(modelRow);
+    auto browse=new StudioButton("…"); modelRow->addWidget(browse); left->addLayout(modelRow);
     connect(browse,&QPushButton::clicked,this,[this]{auto p=QFileDialog::getOpenFileName(this,"Модель GGUF",path->text(),"GGUF (*.gguf);;Все файлы (*)");if(!p.isEmpty()){path->setText(p);inspectModel();}});
-    auto inspect=new QPushButton("Прочитать метаданные GGUF"); left->addWidget(inspect); connect(inspect,&QPushButton::clicked,this,&AdvisorDialog::inspectModel);
+    auto inspect=new StudioButton("Прочитать метаданные GGUF"); left->addWidget(inspect); connect(inspect,&QPushButton::clicked,this,&AdvisorDialog::inspectModel);
     modelLabel=new QLabel("Считываются только метаданные, веса не загружаются в RAM/GPU."); modelLabel->setWordWrap(true); modelLabel->setTextFormat(Qt::PlainText); left->addWidget(modelLabel);
     auto form=new QFormLayout; mode=new QComboBox; mode->addItems({"Чат и диалоги","Агентское программирование"});mode->setCurrentIndex(saved.value("mode").toInt(0)); form->addRow("Задача",mode);
     context=new QSpinBox;context->setObjectName("advisorContext"); context->setRange(1,1048576); context->setSingleStep(1024); context->setValue(saved.value("contextPerSlot").toInt(8192)); form->addRow("Токенов на диалог",context);
@@ -26,7 +27,7 @@ AdvisorDialog::AdvisorDialog(const Config &config,QWidget *parent):QDialog(paren
     sampling->setToolTip("Температура и фильтры зависят от модели. Примеры и объяснения top-k/top-p/min-p — во вкладке «Справочник».");
     cache->setToolTip("Тип KV не равен квантованию весов GGUF. Меняет память контекста и может влиять на качество; сравнение — во вкладке «Память».");
     cpu=new QCheckBox("Только CPU (без видеокарт)");cpu->setChecked(saved.value("cpuOnly").toBool(false)); left->addWidget(cpu);
-    auto gpuRow=new QHBoxLayout; detect=new QPushButton("Найти GPU через llama.cpp"); gpuRow->addWidget(detect); auto manual=new QPushButton("Добавить вручную"); gpuRow->addWidget(manual); left->addLayout(gpuRow);
+    auto gpuRow=new QHBoxLayout; detect=new StudioButton("Найти GPU через llama.cpp"); gpuRow->addWidget(detect); auto manual=new StudioButton("Добавить вручную"); gpuRow->addWidget(manual); left->addLayout(gpuRow);
     devices=new QTableWidget(0,5); devices->setHorizontalHeaderLabels({"Исп.","ID устройства","Название","Всего, МиБ","Свободно, МиБ"}); devices->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents); devices->horizontalHeader()->setSectionResizeMode(2,QHeaderView::Stretch); devices->setMinimumHeight(140); left->addWidget(devices,1);
     deviceLabel=new QLabel("Выберите нужные GPU одного backend. Свободную память можно уточнить вручную; ID должны совпадать со списком llama.cpp."); deviceLabel->setWordWrap(true); deviceLabel->setTextFormat(Qt::PlainText); left->addWidget(deviceLabel);
     auto insights=new QTabWidget;insights->setObjectName("advisorInsights");
@@ -34,7 +35,7 @@ AdvisorDialog::AdvisorDialog(const Config &config,QWidget *parent):QDialog(paren
     memoryReport=new QTextBrowser;memoryReport->setObjectName("memoryReport");memoryReport->setOpenExternalLinks(true);insights->addTab(memoryReport,"Память");
     auto guide=new QTextBrowser;guide->setObjectName("advisorGuide");guide->setOpenExternalLinks(true);guide->setSource(QUrl("qrc:/advisor-guide.html"));insights->addTab(guide,"Справочник");
     split->addWidget(insights); split->setSizes({530,750});
-    auto buttons=new QHBoxLayout; auto close=new QPushButton("Отмена"); buttons->addWidget(close); buttons->addStretch(); apply=new QPushButton("Применить в конфиг"); buttons->addWidget(apply); applyFit=new QPushButton("Применить и запустить fit"); applyFit->setObjectName("primary"); buttons->addWidget(applyFit); root->addLayout(buttons);
+    auto buttons=new QHBoxLayout; auto close=new StudioButton("Отмена"); buttons->addWidget(close); buttons->addStretch(); apply=new StudioButton("Применить в конфиг"); buttons->addWidget(apply); applyFit=new StudioButton("Применить и запустить fit"); applyFit->setObjectName("primary"); buttons->addWidget(applyFit); root->addLayout(buttons);
     connect(close,&QPushButton::clicked,this,&QDialog::reject); connect(apply,&QPushButton::clicked,this,[this]{runFit=false;accept();}); connect(applyFit,&QPushButton::clicked,this,[this]{runFit=true;accept();});
     connect(mode,qOverload<int>(&QComboBox::currentIndexChanged),this,[this](int n){int suggested=n?32768:8192;if(model.trainingContext>0)suggested=int(qMin<qint64>(suggested,model.trainingContext));context->setValue(suggested);updateAdvice();});
     for(auto spin:{context,slotCount,reserve})connect(spin,qOverload<int>(&QSpinBox::valueChanged),this,[this]{updateAdvice();});

@@ -10,6 +10,11 @@ class ConfigTest : public QObject {
         if (!c.load(f.readAll(), &e)) qFatal("%s", qPrintable(e)); return c;
     }
 private slots:
+    void zeroFitContextRoundTrip(){
+        auto c=catalog();c.fitContext=0;Config restored;QString error;QVERIFY2(restored.load(c.save(),&error),qPrintable(error));QCOMPARE(restored.fitContext,0);
+        c.fitContext=-1;QVERIFY(!restored.load(c.save(),&error));QCOMPARE(restored.fitContext,0);
+        QVERIFY(restored.applyFit("-c 0 -ngl 0",&error));QCOMPARE(restored.find("--ctx-size")->value.toInt(),0);
+    }
     void kvMemoryScaling(){
         ModelInfo m;m.architecture="llama";m.layers=32;m.heads=32;m.kvHeads=8;m.embedding=4096;
         QCOMPARE(estimateKvMiB(m,8192,"f16"),1024.0);QCOMPARE(estimateKvMiB(m,16384,"f16"),2048.0);QCOMPARE(estimateKvMiB(m,8192,"q8_0"),544.0);QCOMPARE(estimateKvMiB(m,8192,"q4_0"),288.0);

@@ -2,6 +2,7 @@
 #include "advisordialog.h"
 #include "builderpage.h"
 #include "version.h"
+#include "studiobutton.h"
 #include <QtTest>
 #include <QtWidgets>
 #include <QTcpServer>
@@ -10,6 +11,7 @@
 #include <QTcpSocket>
 class GuiTest : public QObject {
     Q_OBJECT
+    void answerExit(bool yes){QTimer::singleShot(0,qApp,[yes]{auto box=qobject_cast<QMessageBox*>(QApplication::activeModalWidget());QVERIFY(box);auto button=box->findChild<QPushButton*>(yes?"exitYes":"exitNo");QVERIFY(button);QTest::mouseClick(button,Qt::LeftButton,Qt::NoModifier,QPoint(2,button->height()/2));});}
 private slots:
     void initTestCase() {
         QApplication::setStyle("Fusion");QFile style(":/style.qss");if(style.open(QIODevice::ReadOnly))qApp->setStyleSheet(QString::fromUtf8(style.readAll()));
@@ -22,7 +24,14 @@ private slots:
         Config loaded;QString error;QVERIFY(loaded.load(window.config.save(),&error));QCOMPARE(BuildSettings::fromJson(loaded.metadata.value("build").toObject()).targetDirectory,QString("C:/llama-build"));
         window.tabs->setCurrentWidget(page);QApplication::processEvents();
         if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR"))window.grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/builder-preview.png");
-        window.close();
+        answerExit(true);window.close();
+    }
+    void fullButtonAreaAndExitConfirmation(){
+        StudioButton button("Кнопка");button.resize(240,60);button.show();QSignalSpy clicks(&button,&QPushButton::clicked);
+        for(auto p:{QPoint(1,30),QPoint(238,30),QPoint(120,1),QPoint(120,58),QPoint(120,30)})QTest::mouseClick(&button,Qt::LeftButton,Qt::NoModifier,p);
+        QCOMPARE(clicks.size(),5);button.setEnabled(false);QTest::mouseClick(&button,Qt::LeftButton,Qt::NoModifier,QPoint(1,30));QCOMPARE(clicks.size(),5);button.close();
+        MainWindow window(nullptr,false);window.show();answerExit(false);QVERIFY(!window.close());QVERIFY(window.isVisible());QVERIFY(!window.closeConfirmed);
+        answerExit(true);QVERIFY(window.close());QVERIFY(!window.isVisible());
     }
     void recipeFileImportExport(){
         QTemporaryDir dir;BuilderPage page;auto edit=page.findChild<QPlainTextEdit*>("buildCommands");QVERIFY(edit);QString error;
@@ -117,8 +126,10 @@ private slots:
         QCOMPARE(w.status->text(), QString::fromUtf8("Параметры подобраны"));
         QCOMPARE(w.config.find("--ctx-size")->value.toInt(), 16384);
         QCOMPARE(w.config.find("--override-tensor")->value.toString(), QString("blk\\.14\\.ffn_(up|down)=CPU"));
+        QCOMPARE(w.context->minimum(),0);w.context->setValue(0);w.launchFit();QTRY_COMPARE(w.fit.state(),QProcess::NotRunning);QCOMPARE(w.config.find("--ctx-size")->value.toInt(),32768);QCOMPARE(w.config.fitContext,0);
         w.launchServer(); QTRY_COMPARE(w.server.state(), QProcess::Running);
         QTRY_VERIFY(w.status->text().contains(QString::fromUtf8("Сервер готов")));
+        answerExit(false);QVERIFY(!w.close());QCOMPARE(w.server.state(),QProcess::Running);
         QVERIFY(w.runningCommand->toPlainText().contains(model.fileName().replace('/', QDir::separator())) || w.runningCommand->toPlainText().contains(model.fileName()));
         w.stopping = true; w.stop(w.server); QTRY_COMPARE(w.server.state(), QProcess::NotRunning);
         QVERIFY(w.startButton->isEnabled());
@@ -126,7 +137,7 @@ private slots:
         w.config.find("--model")->value = bad.fileName(); auto before = w.config.save(); w.launchFit();
         QTRY_COMPARE(w.fit.state(), QProcess::NotRunning);
         QCOMPARE(w.config.save(), before); QCOMPARE(w.status->text(), QString::fromUtf8("Ошибка подбора"));
-        w.close();
+        answerExit(true);w.close();
     }
 };
 QTEST_MAIN(GuiTest)

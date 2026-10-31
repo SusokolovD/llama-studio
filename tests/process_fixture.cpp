@@ -5,9 +5,19 @@
 #include <QDir>
 #include <QFile>
 #include <QTimer>
+#include <QProcess>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <cstdio>
 int main(int argc, char **argv) {
     QCoreApplication app(argc, argv); auto args = app.arguments();
+    if(args.contains("--hold-worker")){QTimer::singleShot(60000,&app,&QCoreApplication::quit);return app.exec();}
+    if(args.contains("--process-tree")){
+        QProcess worker;worker.start(app.applicationFilePath(),QStringList{"--hold-worker"});if(!worker.waitForStarted(5000))return 51;
+        QFile file(args.value(args.indexOf("--process-tree")+1));if(!file.open(QIODevice::WriteOnly))return 52;
+        file.write(QJsonDocument(QJsonObject{{"parentPid",double(app.applicationPid())},{"workerPid",double(worker.processId())}}).toJson());file.close();
+        QTimer::singleShot(60000,&app,&QCoreApplication::quit);return app.exec();
+    }
     if(args.contains("--fail-build"))return 42;
     if(args.contains("--sleep-build")){QTimer::singleShot(60000,&app,&QCoreApplication::quit);return app.exec();}
     if(args.contains("--make-build")){
@@ -26,7 +36,7 @@ int main(int argc, char **argv) {
     if (modelIndex < 0 || !QFileInfo::exists(args.value(modelIndex + 1))) return 41;
     if (args.value(modelIndex + 1).contains("failure")) { fprintf(stderr, "fixture: deliberate failure\n"); return 42; }
     if (QFileInfo(app.applicationFilePath()).baseName().contains("fit")) {
-        auto ctx = args.value(args.indexOf("--ctx-size") + 1);
+        auto ctx = args.value(args.indexOf("--ctx-size") + 1);if(ctx=="0")ctx="32768";
         printf("-c %s -ngl 24 -ot \"blk\\.14\\.ffn_(up|down)=CPU\"\n", qPrintable(ctx)); fflush(stdout); return 0;
     }
     QTcpServer server;

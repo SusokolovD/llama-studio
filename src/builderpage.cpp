@@ -1,22 +1,23 @@
+#include "studiobutton.h"
 #include "builderpage.h"
 #include <QtWidgets>
 BuilderPage::BuilderPage(QWidget *parent):QWidget(parent),service(this) {
     auto root=new QVBoxLayout(this);root->setContentsMargins(0,0,0,0);
     auto hint=new QLabel("Обновление исходников → сборка → установка в отдельную llama-build. Настройки сохраняются вместе с JSON-конфигом.");hint->setWordWrap(true);root->addWidget(hint);
     fields=new QWidget;auto form=new QFormLayout(fields);form->setContentsMargins(0,6,0,6);
-    auto pathRow=[&](const QString &label,QLineEdit **field,const QString &name){auto container=new QWidget;auto row=new QHBoxLayout(container);row->setContentsMargins(0,0,0,0);auto edit=new QLineEdit;edit->setObjectName(name);row->addWidget(edit,1);auto browse=new QPushButton("Обзор…");row->addWidget(browse);*field=edit;form->addRow(label,container);connect(browse,&QPushButton::clicked,this,[this,edit]{auto p=QFileDialog::getExistingDirectory(this,"Выберите папку",edit->text());if(!p.isEmpty())edit->setText(QDir::toNativeSeparators(p));});};
+    auto pathRow=[&](const QString &label,QLineEdit **field,const QString &name){auto container=new QWidget;auto row=new QHBoxLayout(container);row->setContentsMargins(0,0,0,0);auto edit=new QLineEdit;edit->setObjectName(name);row->addWidget(edit,1);auto browse=new StudioButton("Обзор…");row->addWidget(browse);*field=edit;form->addRow(label,container);connect(browse,&QPushButton::clicked,this,[this,edit]{auto p=QFileDialog::getExistingDirectory(this,"Выберите папку",edit->text());if(!p.isEmpty())edit->setText(QDir::toNativeSeparators(p));});};
     pathRow("Исходники (Git-репозиторий)",&source,"buildSource");source->setPlaceholderText("Папка с .git и CMakeLists.txt");
     pathRow("Готовые бинарники сборки",&binary,"buildBinary");binary->setPlaceholderText("build/bin/Release или абсолютный путь к папке с exe и DLL");
     pathRow("Установить в (llama-build)",&target,"buildTarget");
     auto recipeTools=new QWidget;auto tools=new QHBoxLayout(recipeTools);tools->setContentsMargins(0,0,0,0);
-    auto load=new QPushButton("Загрузить JSON команд…");tools->addWidget(load);auto save=new QPushButton("Сохранить JSON команд…");tools->addWidget(save);tools->addStretch();form->addRow(recipeTools);
+    auto load=new StudioButton("Загрузить JSON команд…");tools->addWidget(load);auto save=new StudioButton("Сохранить JSON команд…");tools->addWidget(save);tools->addStretch();form->addRow(recipeTools);
     commands=new QPlainTextEdit;commands->setObjectName("buildCommands");commands->setFixedHeight(150);form->addRow("JSON команд сборки",commands);
     recipeState=new QLabel;recipeState->setObjectName("recipeState");recipeState->setWordWrap(true);recipeState->setTextFormat(Qt::PlainText);
     auto syntax=new QLabel("program — программа, arguments — массив строк. Пути с пробелами указываются одной строкой массива, без дополнительных кавычек. Рабочая папка — исходники. Флаги backend изменяйте под свой комплект. Файл по умолчанию: build-commands.json рядом с exe.");syntax->setWordWrap(true);syntax->setObjectName("subtitle");form->addRow(syntax);
     auto split=new QSplitter(Qt::Vertical);split->setChildrenCollapsible(false);auto settingsScroll=new QScrollArea;settingsScroll->setWidgetResizable(true);settingsScroll->setWidget(fields);settingsScroll->setMinimumHeight(180);split->addWidget(settingsScroll);root->addWidget(split,1);
     connect(load,&QPushButton::clicked,this,[this]{auto path=QFileDialog::getOpenFileName(this,"Загрузить команды",{},"JSON (*.json)");if(path.isEmpty())return;QString error;if(!loadRecipeFile(path,&error))QMessageBox::warning(this,"Команды сборки",error);});
     connect(save,&QPushButton::clicked,this,[this]{auto path=QFileDialog::getSaveFileName(this,"Сохранить команды","build-commands.json","JSON (*.json)");if(path.isEmpty())return;QString error;if(!saveRecipeFile(path,&error))QMessageBox::warning(this,"Команды сборки",error);});
-    auto actions=new QHBoxLayout;startButton=new QPushButton("Git pull → собрать → скопировать");startButton->setObjectName("primary");actions->addWidget(startButton);cancelButton=new QPushButton("Отменить");cancelButton->setEnabled(false);actions->addWidget(cancelButton);actions->addStretch();root->addLayout(actions);root->addWidget(recipeState);
+    auto actions=new QHBoxLayout;startButton=new StudioButton("Git pull → собрать → скопировать");startButton->setObjectName("primary");actions->addWidget(startButton);cancelButton=new StudioButton("Отменить");cancelButton->setEnabled(false);actions->addWidget(cancelButton);actions->addStretch();root->addLayout(actions);root->addWidget(recipeState);
     state=new QLabel("Готово к запуску. Git pull выполняется с --ff-only; локальные изменения не сбрасываются.");state->setWordWrap(true);state->setTextFormat(Qt::PlainText);root->addWidget(state);
     log=new QPlainTextEdit;log->setReadOnly(true);log->setMaximumBlockCount(12000);log->setMinimumHeight(80);log->setPlaceholderText("Журнал обновления, сборки и копирования. Размер панелей можно менять разделителем.");split->addWidget(log);split->setSizes({390,140});
     connect(startButton,&QPushButton::clicked,this,&BuilderPage::startRequested);connect(cancelButton,&QPushButton::clicked,&service,&BuildService::cancel);
