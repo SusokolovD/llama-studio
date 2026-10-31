@@ -1,0 +1,5358 @@
+{
+  "schemaVersion": 1,
+  "source": "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md",
+  "typeEnum": {
+    "string": 0,
+    "integer": 1,
+    "number": 2,
+    "boolean": 3,
+    "path": 4,
+    "choice": 5,
+    "arguments": 6
+  },
+  "groups": [
+    "Common params",
+    "Sampling params",
+    "Server-specific params"
+  ],
+  "parameters": [
+    {
+      "name": "--help",
+      "label": "Справка",
+      "type": 3,
+      "default": null,
+      "priority": 100,
+      "group": "Common params",
+      "aliases": [
+        "-h",
+        "--help",
+        "--usage"
+      ],
+      "negative": "",
+      "description": "Показать справку и завершить работу.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": true,
+      "originalDescription": "print usage and exit",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--version",
+      "label": "Версия сборки",
+      "type": 3,
+      "default": null,
+      "priority": 101,
+      "group": "Common params",
+      "aliases": [
+        "--version"
+      ],
+      "negative": "",
+      "description": "Показать версию и сведения о сборке llama.cpp.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": true,
+      "originalDescription": "show version and build info",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cache-list",
+      "label": "Модели в кэше",
+      "type": 3,
+      "default": null,
+      "priority": 102,
+      "group": "Common params",
+      "aliases": [
+        "-cl",
+        "--cache-list"
+      ],
+      "negative": "",
+      "description": "Показать список моделей в локальном кэше.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": true,
+      "originalDescription": "show list of models in cache",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--completion-bash",
+      "label": "Автодополнение Bash",
+      "type": 3,
+      "default": null,
+      "priority": 103,
+      "group": "Common params",
+      "aliases": [
+        "--completion-bash"
+      ],
+      "negative": "",
+      "description": "Вывести скрипт дополнения аргументов для Bash.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": true,
+      "originalDescription": "print source-able bash completion script for llama.cpp",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--threads",
+      "label": "Потоки процессора",
+      "type": 1,
+      "default": -1,
+      "priority": 6,
+      "group": "Common params",
+      "aliases": [
+        "-t",
+        "--threads"
+      ],
+      "negative": "",
+      "description": "Число потоков CPU при генерации. -1 включает автоматический выбор.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "number of CPU threads to use during generation (default: -1)\n(env: LLAMA_ARG_THREADS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--threads-batch",
+      "label": "Потоки обработки запроса",
+      "type": 1,
+      "default": null,
+      "priority": 105,
+      "group": "Common params",
+      "aliases": [
+        "-tb",
+        "--threads-batch"
+      ],
+      "negative": "",
+      "description": "Потоки CPU для обработки входного текста; по умолчанию как при генерации.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "number of threads to use during batch and prompt processing (default: same as --threads)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cpu-mask",
+      "label": "Маска ядер CPU",
+      "type": 0,
+      "default": "",
+      "priority": 106,
+      "group": "Common params",
+      "aliases": [
+        "-C",
+        "--cpu-mask"
+      ],
+      "negative": "",
+      "description": "Шестнадцатеричная маска привязки потоков к ядрам процессора.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "CPU affinity mask: arbitrarily long hex. Complements cpu-range (default: \"\")",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cpu-range",
+      "label": "Диапазон ядер CPU",
+      "type": 0,
+      "default": null,
+      "priority": 107,
+      "group": "Common params",
+      "aliases": [
+        "-Cr",
+        "--cpu-range"
+      ],
+      "negative": "",
+      "description": "Разрешённые ядра в формате начало-конец; дополняет маску CPU.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "range of CPUs for affinity. Complements --cpu-mask",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cpu-strict",
+      "label": "Строгая привязка к ядрам",
+      "type": 1,
+      "default": 0,
+      "priority": 108,
+      "group": "Common params",
+      "aliases": [
+        "--cpu-strict"
+      ],
+      "negative": "",
+      "description": "1 включает строгую привязку потоков к выбранным ядрам, 0 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use strict CPU placement (default: 0)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--prio",
+      "label": "Приоритет вычислений",
+      "type": 1,
+      "default": 0,
+      "priority": 109,
+      "group": "Common params",
+      "aliases": [
+        "--prio"
+      ],
+      "negative": "",
+      "description": "Приоритет: -1 низкий, 0 обычный, 1 повышенный, 2 высокий, 3 реального времени.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set process/thread priority : low(-1), normal(0), medium(1), high(2), realtime(3) (default: 0)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--poll",
+      "label": "Активное ожидание CPU",
+      "type": 1,
+      "default": 50,
+      "priority": 110,
+      "group": "Common params",
+      "aliases": [
+        "--poll"
+      ],
+      "negative": "",
+      "description": "Интенсивность опроса задач от 0 до 100. Ноль отключает активное ожидание.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use polling level to wait for work (0 - no polling, default: 50)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cpu-mask-batch",
+      "label": "Маска ядер для пакетов",
+      "type": 0,
+      "default": null,
+      "priority": 111,
+      "group": "Common params",
+      "aliases": [
+        "-Cb",
+        "--cpu-mask-batch"
+      ],
+      "negative": "",
+      "description": "Маска привязки потоков при обработке входного текста.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "CPU affinity mask: arbitrarily long hex. Complements cpu-range-batch (default: same as --cpu-mask)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cpu-range-batch",
+      "label": "Ядра обработки пакетов",
+      "type": 0,
+      "default": null,
+      "priority": 112,
+      "group": "Common params",
+      "aliases": [
+        "-Crb",
+        "--cpu-range-batch"
+      ],
+      "negative": "",
+      "description": "Диапазон ядер CPU для обработки входного текста.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "ranges of CPUs for affinity. Complements --cpu-mask-batch",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cpu-strict-batch",
+      "label": "Строгая привязка пакетов",
+      "type": 1,
+      "default": null,
+      "priority": 113,
+      "group": "Common params",
+      "aliases": [
+        "--cpu-strict-batch"
+      ],
+      "negative": "",
+      "description": "Строгая привязка к ядрам при обработке запроса: 0 или 1.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use strict CPU placement (default: same as --cpu-strict)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--prio-batch",
+      "label": "Приоритет обработки пакетов",
+      "type": 1,
+      "default": 0,
+      "priority": 114,
+      "group": "Common params",
+      "aliases": [
+        "--prio-batch"
+      ],
+      "negative": "",
+      "description": "Приоритет: 0 обычный, 1 повышенный, 2 высокий, 3 реального времени.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set process/thread priority : 0-normal, 1-medium, 2-high, 3-realtime (default: 0)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--poll-batch",
+      "label": "Опрос задач обработки пакетов",
+      "type": 1,
+      "default": null,
+      "priority": 115,
+      "group": "Common params",
+      "aliases": [
+        "--poll-batch"
+      ],
+      "negative": "",
+      "description": "Активное ожидание при обработке входного текста; наследуется от основного режима.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use polling to wait for work (default: same as --poll)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--ctx-size",
+      "label": "Размер контекста",
+      "type": 1,
+      "default": 0,
+      "priority": 2,
+      "group": "Common params",
+      "aliases": [
+        "-c",
+        "--ctx-size"
+      ],
+      "negative": "",
+      "description": "Общий размер контекста в токенах. Ноль берёт значение из модели. При нескольких слотах учитывайте контекст каждого диалога.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "size of the prompt context (default: 0, 0 = loaded from model)\n(env: LLAMA_ARG_CTX_SIZE)",
+      "choiceLabels": {},
+      "guidance": {
+        "chat": "Начните с 8192 токенов на диалог, если модель поддерживает; увеличивайте по длине истории.",
+        "agent": "Для репозитория часто нужен длинный контекст. Начните с 32768 при поддержке модели и проверьте расход памяти."
+      }
+    },
+    {
+      "name": "--predict",
+      "label": "Лимит ответа",
+      "type": 1,
+      "default": -1,
+      "priority": 117,
+      "group": "Common params",
+      "aliases": [
+        "-n",
+        "--predict",
+        "--n-predict"
+      ],
+      "negative": "",
+      "description": "Максимальное число генерируемых токенов. -1 снимает ограничение по этому параметру.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "number of tokens to predict (default: -1, -1 = infinity)\n(env: LLAMA_ARG_N_PREDICT)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--batch-size",
+      "label": "Логический размер пакета",
+      "type": 1,
+      "default": 2048,
+      "priority": 9,
+      "group": "Common params",
+      "aliases": [
+        "-b",
+        "--batch-size"
+      ],
+      "negative": "",
+      "description": "Максимальный пакет входных токенов. Большое значение может ускорить обработку запроса и увеличить расход памяти.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "logical maximum batch size (default: 2048)\n(env: LLAMA_ARG_BATCH)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--ubatch-size",
+      "label": "Физический размер пакета",
+      "type": 1,
+      "default": 512,
+      "priority": 10,
+      "group": "Common params",
+      "aliases": [
+        "-ub",
+        "--ubatch-size"
+      ],
+      "negative": "",
+      "description": "Размер вычислительного микропакета. Уменьшайте при нехватке памяти во время обработки запроса.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "physical maximum batch size (default: 512)\n(env: LLAMA_ARG_UBATCH)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--keep",
+      "label": "Сохраняемое начало запроса",
+      "type": 1,
+      "default": 0,
+      "priority": 120,
+      "group": "Common params",
+      "aliases": [
+        "--keep"
+      ],
+      "negative": "",
+      "description": "Число начальных токенов, сохраняемых при сдвиге контекста; -1 сохраняет всё начало.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "number of tokens to keep from the initial prompt (default: 0, -1 = all)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--swa-full",
+      "label": "Полный кэш скользящего внимания",
+      "type": 3,
+      "default": false,
+      "priority": 121,
+      "group": "Common params",
+      "aliases": [
+        "--swa-full"
+      ],
+      "negative": "",
+      "description": "Использовать полноразмерный кэш SWA вместо ограниченного скользящего окна.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use full-size SWA cache (default: false)\n(more info)\n(env: LLAMA_ARG_SWA_FULL)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--flash-attn",
+      "label": "Ускоренное внимание",
+      "type": 5,
+      "default": "auto",
+      "priority": 8,
+      "group": "Common params",
+      "aliases": [
+        "-fa",
+        "--flash-attn"
+      ],
+      "negative": "",
+      "description": "Flash Attention: включить, выключить или выбрать автоматически. Поддержка зависит от модели и вычислительного backend.",
+      "choices": [
+        "on",
+        "off",
+        "auto"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set Flash Attention use ('on', 'off', or 'auto', default: 'auto')\n(env: LLAMA_ARG_FLASH_ATTN)",
+      "choiceLabels": {
+        "on": "Включено",
+        "off": "Выключено",
+        "auto": "Автоматически"
+      }
+    },
+    {
+      "name": "--perf",
+      "label": "Измерения производительности",
+      "type": 3,
+      "default": false,
+      "priority": 123,
+      "group": "Common params",
+      "aliases": [
+        "--perf",
+        "--no-perf"
+      ],
+      "negative": "--no-perf",
+      "description": "Включить внутренние измерения времени работы libllama.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to enable internal libllama performance timings (default: false)\n(env: LLAMA_ARG_PERF)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--escape",
+      "label": "Обработка спецпоследовательностей",
+      "type": 3,
+      "default": true,
+      "priority": 124,
+      "group": "Common params",
+      "aliases": [
+        "-e",
+        "--escape",
+        "--no-escape"
+      ],
+      "negative": "--no-escape",
+      "description": "Обрабатывать экранированные переводы строк, табуляцию, кавычки и обратные слеши.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to process escapes sequences (\\n, \\r, \\t, \\', \\\", \\\\) (default: true)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--rope-scaling",
+      "label": "Способ масштабирования RoPE",
+      "type": 5,
+      "default": null,
+      "priority": 125,
+      "group": "Common params",
+      "aliases": [
+        "--rope-scaling"
+      ],
+      "negative": "",
+      "description": "Без масштабирования, линейный метод или YaRN. Следуйте рекомендациям автора модели.",
+      "choices": [
+        "none",
+        "linear",
+        "yarn"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "RoPE frequency scaling method, defaults to linear unless specified by the model\n(env: LLAMA_ARG_ROPE_SCALING_TYPE)",
+      "choiceLabels": {
+        "none": "Без / отключено",
+        "linear": "Линейное",
+        "yarn": "yarn"
+      }
+    },
+    {
+      "name": "--rope-scale",
+      "label": "Масштаб контекста RoPE",
+      "type": 2,
+      "default": null,
+      "priority": 126,
+      "group": "Common params",
+      "aliases": [
+        "--rope-scale"
+      ],
+      "negative": "",
+      "description": "Коэффициент расширения контекста. Изменение без подходящего обучения модели может ухудшить качество.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "RoPE context scaling factor, expands context by a factor of N\n(env: LLAMA_ARG_ROPE_SCALE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--rope-freq-base",
+      "label": "Базовая частота RoPE",
+      "type": 2,
+      "default": null,
+      "priority": 127,
+      "group": "Common params",
+      "aliases": [
+        "--rope-freq-base"
+      ],
+      "negative": "",
+      "description": "Базовая частота позиционного кодирования. Обычно берётся из модели.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "RoPE base frequency, used by NTK-aware scaling (default: loaded from model)\n(env: LLAMA_ARG_ROPE_FREQ_BASE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--rope-freq-scale",
+      "label": "Масштаб частот RoPE",
+      "type": 2,
+      "default": null,
+      "priority": 128,
+      "group": "Common params",
+      "aliases": [
+        "--rope-freq-scale"
+      ],
+      "negative": "",
+      "description": "Коэффициент частот; контекст расширяется в 1/N раз.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "RoPE frequency scaling factor, expands context by a factor of 1/N\n(env: LLAMA_ARG_ROPE_FREQ_SCALE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--yarn-orig-ctx",
+      "label": "Исходный контекст YaRN",
+      "type": 1,
+      "default": 0,
+      "priority": 129,
+      "group": "Common params",
+      "aliases": [
+        "--yarn-orig-ctx"
+      ],
+      "negative": "",
+      "description": "Исходный размер контекста; 0 использует обучающий контекст модели.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "YaRN: original context size of model (default: 0 = model training context size)\n(env: LLAMA_ARG_YARN_ORIG_CTX)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--yarn-ext-factor",
+      "label": "Экстраполяция YaRN",
+      "type": 2,
+      "default": -1.0,
+      "priority": 130,
+      "group": "Common params",
+      "aliases": [
+        "--yarn-ext-factor"
+      ],
+      "negative": "",
+      "description": "Коэффициент смешивания экстраполяции; 0 означает полную интерполяцию.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "YaRN: extrapolation mix factor (default: -1.00, 0.0 = full interpolation)\n(env: LLAMA_ARG_YARN_EXT_FACTOR)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--yarn-attn-factor",
+      "label": "Масштаб внимания YaRN",
+      "type": 2,
+      "default": -1.0,
+      "priority": 131,
+      "group": "Common params",
+      "aliases": [
+        "--yarn-attn-factor"
+      ],
+      "negative": "",
+      "description": "Множитель амплитуды внимания при масштабировании YaRN.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "YaRN: scale sqrt(t) or attention magnitude (default: -1.00)\n(env: LLAMA_ARG_YARN_ATTN_FACTOR)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--yarn-beta-slow",
+      "label": "Медленная коррекция YaRN",
+      "type": 1,
+      "default": -1,
+      "priority": 132,
+      "group": "Common params",
+      "aliases": [
+        "--yarn-beta-slow"
+      ],
+      "negative": "",
+      "description": "Параметр медленной коррекции частот YaRN.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "YaRN: high correction dim or alpha (default: -1.00)\n(env: LLAMA_ARG_YARN_BETA_SLOW)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--yarn-beta-fast",
+      "label": "Быстрая коррекция YaRN",
+      "type": 1,
+      "default": -1,
+      "priority": 133,
+      "group": "Common params",
+      "aliases": [
+        "--yarn-beta-fast"
+      ],
+      "negative": "",
+      "description": "Параметр быстрой коррекции частот YaRN.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "YaRN: low correction dim or beta (default: -1.00)\n(env: LLAMA_ARG_YARN_BETA_FAST)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--kv-offload",
+      "label": "Кэш контекста на GPU",
+      "type": 3,
+      "default": true,
+      "priority": 134,
+      "group": "Common params",
+      "aliases": [
+        "-kvo",
+        "--kv-offload",
+        "-nkvo",
+        "--no-kv-offload"
+      ],
+      "negative": "--no-kv-offload",
+      "description": "Размещать KV-кэш на ускорителе. Отключение переносит его на CPU и может снизить скорость.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to enable KV cache offloading (default: enabled)\n(env: LLAMA_ARG_KV_OFFLOAD)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--repack",
+      "label": "Перепаковка весов",
+      "type": 3,
+      "default": true,
+      "priority": 135,
+      "group": "Common params",
+      "aliases": [
+        "--repack",
+        "-nr",
+        "--no-repack"
+      ],
+      "negative": "--no-repack",
+      "description": "Разрешить перепаковку весов для более эффективных вычислений.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to enable weight repacking (default: enabled)\n(env: LLAMA_ARG_REPACK)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--no-host",
+      "label": "Обход буфера CPU",
+      "type": 3,
+      "default": null,
+      "priority": 136,
+      "group": "Common params",
+      "aliases": [
+        "--no-host"
+      ],
+      "negative": "--no-host",
+      "description": "Обойти основной буфер хоста, разрешив дополнительные типы буферов.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "bypass host buffer allowing extra buffers to be used\n(env: LLAMA_ARG_NO_HOST)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cache-type-k",
+      "label": "Формат ключей KV-кэша",
+      "type": 5,
+      "default": "f16",
+      "priority": 11,
+      "group": "Common params",
+      "aliases": [
+        "-ctk",
+        "--cache-type-k"
+      ],
+      "negative": "",
+      "description": "Тип хранения ключей внимания. Квантование сокращает память, но может влиять на качество и совместимость.",
+      "choices": [
+        "f32",
+        "f16",
+        "bf16",
+        "q8_0",
+        "q4_0",
+        "q4_1",
+        "iq4_nl",
+        "q5_0",
+        "q5_1"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "KV cache data type for K\nallowed values: f32, f16, bf16, q8_0, q4_0, q4_1, iq4_nl, q5_0, q5_1\n(default: f16)\n(env: LLAMA_ARG_CACHE_TYPE_K)",
+      "choiceLabels": {
+        "f32": "f32",
+        "f16": "f16",
+        "bf16": "bf16",
+        "q8_0": "q8_0",
+        "q4_0": "q4_0",
+        "q4_1": "q4_1",
+        "iq4_nl": "iq4_nl",
+        "q5_0": "q5_0",
+        "q5_1": "q5_1"
+      }
+    },
+    {
+      "name": "--cache-type-v",
+      "label": "Формат значений KV-кэша",
+      "type": 5,
+      "default": "f16",
+      "priority": 12,
+      "group": "Common params",
+      "aliases": [
+        "-ctv",
+        "--cache-type-v"
+      ],
+      "negative": "",
+      "description": "Тип хранения значений внимания. Поддержка квантования зависит от backend и Flash Attention.",
+      "choices": [
+        "f32",
+        "f16",
+        "bf16",
+        "q8_0",
+        "q4_0",
+        "q4_1",
+        "iq4_nl",
+        "q5_0",
+        "q5_1"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "KV cache data type for V\nallowed values: f32, f16, bf16, q8_0, q4_0, q4_1, iq4_nl, q5_0, q5_1\n(default: f16)\n(env: LLAMA_ARG_CACHE_TYPE_V)",
+      "choiceLabels": {
+        "f32": "f32",
+        "f16": "f16",
+        "bf16": "bf16",
+        "q8_0": "q8_0",
+        "q4_0": "q4_0",
+        "q4_1": "q4_1",
+        "iq4_nl": "iq4_nl",
+        "q5_0": "q5_0",
+        "q5_1": "q5_1"
+      }
+    },
+    {
+      "name": "--defrag-thold",
+      "label": "Порог дефрагментации кэша",
+      "type": 1,
+      "default": null,
+      "priority": 139,
+      "group": "Common params",
+      "aliases": [
+        "-dt",
+        "--defrag-thold"
+      ],
+      "negative": "",
+      "description": "Устаревшая настройка дефрагментации KV-кэша; больше не требуется.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": true,
+      "action": false,
+      "originalDescription": "KV cache defragmentation threshold (DEPRECATED)\n(env: LLAMA_ARG_DEFRAG_THOLD)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--rpc",
+      "label": "Удалённые устройства RPC",
+      "type": 0,
+      "default": null,
+      "priority": 140,
+      "group": "Common params",
+      "aliases": [
+        "--rpc"
+      ],
+      "negative": "",
+      "description": "Список RPC-серверов в формате адрес:порт через запятую.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "comma-separated list of RPC servers (host:port)\n(env: LLAMA_ARG_RPC)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--load-mode",
+      "label": "Способ загрузки модели",
+      "type": 5,
+      "default": "auto",
+      "priority": 141,
+      "group": "Common params",
+      "aliases": [
+        "-lm",
+        "--load-mode"
+      ],
+      "negative": "",
+      "description": "Автовыбор, чтение, отображение файла в память, закрепление RAM или прямой ввод-вывод.",
+      "choices": [
+        "auto",
+        "none",
+        "mmap",
+        "mlock",
+        "mmap+mlock",
+        "dio"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "model loading mode (default: auto)\n- auto: mmap, unless a device does not support it\n- none: no special loading mode\n- mmap: memory-map model (if mmap disabled, slower load but may reduce pageouts if not using mlock)\n- mlock: force system to keep model in RAM rather than swapping or compressing\n- mmap+mlock: mmap + force system to keep model in RAM rather than swapping or compressing\n- dio: use DirectIO if available\n\n(env: LLAMA_ARG_LOAD_MODE)",
+      "choiceLabels": {
+        "auto": "Автоматически",
+        "none": "Без / отключено",
+        "mmap": "mmap",
+        "mlock": "mlock",
+        "mmap+mlock": "mmap+mlock",
+        "dio": "dio"
+      }
+    },
+    {
+      "name": "--lazy-mode",
+      "label": "Чтение тензоров по требованию",
+      "type": 5,
+      "default": "auto",
+      "priority": 142,
+      "group": "Common params",
+      "aliases": [
+        "-lzm",
+        "--lazy-mode"
+      ],
+      "negative": "",
+      "description": "Читать некоторые тензоры по мере необходимости; требуется отображение файла в память.",
+      "choices": [
+        "on",
+        "auto",
+        "off"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "on-demand reading of certain tensors, for example per-layer embeddings (default: auto)\n- on: read the rows of such tensors from disk on demand instead of keeping them resident (requires mmap)\n- auto: on, but only for tensors larger than 4 GiB\n- off: always keep them resident\n(env: LLAMA_ARG_LAZY_MODE)",
+      "choiceLabels": {
+        "on": "Включено",
+        "auto": "Автоматически",
+        "off": "Выключено"
+      }
+    },
+    {
+      "name": "--numa",
+      "label": "Размещение на NUMA",
+      "type": 5,
+      "default": null,
+      "priority": 143,
+      "group": "Common params",
+      "aliases": [
+        "--numa"
+      ],
+      "negative": "",
+      "description": "Распределить потоки по узлам, ограничить одним узлом или использовать карту numactl.",
+      "choices": [
+        "distribute",
+        "isolate",
+        "numactl"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "attempt optimizations that help on some NUMA systems\n- distribute: spread execution evenly over all nodes\n- isolate: only spawn threads on CPUs on the node that execution started on\n- numactl: use the CPU map provided by numactl\nif run without this previously, it is recommended to drop the system page cache before using this\nsee https://github.com/ggml-org/llama.cpp/issues/1437\n(env: LLAMA_ARG_NUMA)",
+      "choiceLabels": {
+        "distribute": "Распределить по узлам",
+        "isolate": "Один узел",
+        "numactl": "numactl"
+      }
+    },
+    {
+      "name": "--device",
+      "label": "Видеокарты и ускорители",
+      "type": 0,
+      "default": null,
+      "priority": 144,
+      "group": "Common params",
+      "aliases": [
+        "-dev",
+        "--device"
+      ],
+      "negative": "",
+      "description": "Идентификаторы llama.cpp через запятую, например CUDA0,CUDA1. none отключает выгрузку на GPU.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "comma-separated list of devices to use for offloading (none = don't offload)\nuse --list-devices to see a list of available devices\n(env: LLAMA_ARG_DEVICE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--list-devices",
+      "label": "Список ускорителей",
+      "type": 3,
+      "default": null,
+      "priority": 145,
+      "group": "Common params",
+      "aliases": [
+        "--list-devices"
+      ],
+      "negative": "",
+      "description": "Показать доступные устройства llama.cpp и завершить работу.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": true,
+      "originalDescription": "print list of available devices and exit",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--override-tensor",
+      "label": "Размещение отдельных тензоров",
+      "type": 0,
+      "default": null,
+      "priority": 146,
+      "group": "Common params",
+      "aliases": [
+        "-ot",
+        "--override-tensor"
+      ],
+      "negative": "",
+      "description": "Буферы тензоров по шаблону: шаблон=тип_буфера. Настраивайте вручную или по результатам fit.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "override tensor buffer type\n(env: LLAMA_ARG_OVERRIDE_TENSOR)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cpu-moe",
+      "label": "Эксперты MoE на CPU",
+      "type": 3,
+      "default": null,
+      "priority": 147,
+      "group": "Common params",
+      "aliases": [
+        "-cmoe",
+        "--cpu-moe"
+      ],
+      "negative": "",
+      "description": "Оставить веса всех экспертов MoE в оперативной памяти процессора.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "keep all Mixture of Experts (MoE) weights in the CPU\n(env: LLAMA_ARG_CPU_MOE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--n-cpu-moe",
+      "label": "Слои экспертов на CPU",
+      "type": 1,
+      "default": null,
+      "priority": 148,
+      "group": "Common params",
+      "aliases": [
+        "-ncmoe",
+        "--n-cpu-moe"
+      ],
+      "negative": "",
+      "description": "Число первых слоёв, эксперты MoE которых остаются на CPU.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "keep the Mixture of Experts (MoE) weights of the first N layers in the CPU\n(env: LLAMA_ARG_N_CPU_MOE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--moe-cache-mib",
+      "label": "Кэш экспертов на GPU",
+      "type": 1,
+      "default": 0,
+      "priority": 149,
+      "group": "Common params",
+      "aliases": [
+        "--moe-cache-mib"
+      ],
+      "negative": "",
+      "description": "Размер GPU-кэша экспертов MoE в МиБ; между GPU распределяется по пропорциям разделения модели.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "GPU cache size in MiB for the MoE experts kept in the CPU. with multiple GPUs, it is split among them like the layers (--tensor-split) (default: 0, disabled)\n(env: LLAMA_ARG_MOE_CACHE_MIB)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--n-cpu-ffn",
+      "label": "Полносвязные слои на CPU",
+      "type": 1,
+      "default": null,
+      "priority": 150,
+      "group": "Common params",
+      "aliases": [
+        "-ncffn",
+        "--n-cpu-ffn"
+      ],
+      "negative": "",
+      "description": "Оставить FFN-веса первых N слоёв плотной модели на CPU; для MoE используйте настройку экспертов.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "keep the dense FFN weights of the first N layers in the CPU\n(dense models; for MoE expert weights use --n-cpu-moe)\n(env: LLAMA_ARG_N_CPU_FFN)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--gpu-layers",
+      "label": "Слои модели на GPU",
+      "type": 0,
+      "default": "auto",
+      "priority": 3,
+      "group": "Common params",
+      "aliases": [
+        "-ngl",
+        "--gpu-layers",
+        "--n-gpu-layers"
+      ],
+      "negative": "",
+      "description": "Максимальное число слоёв в видеопамяти: число, auto или all. Подбор fit помогает избежать переполнения VRAM.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "max. number of layers to store in VRAM, either an exact number, 'auto', or 'all' (default: auto)\n(env: LLAMA_ARG_N_GPU_LAYERS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--split-mode",
+      "label": "Разделение между видеокартами",
+      "type": 5,
+      "default": null,
+      "priority": 22,
+      "group": "Common params",
+      "aliases": [
+        "-sm",
+        "--split-mode"
+      ],
+      "negative": "",
+      "description": "none — одна GPU; layer — слои и KV-кэш по GPU; row — веса по строкам; tensor — экспериментальное параллельное разделение.",
+      "choices": [
+        "none",
+        "layer",
+        "row",
+        "tensor"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "how to split the model across multiple GPUs, one of:\n- none: use one GPU only\n- layer (default): split layers and KV across GPUs (pipelined)\n- row: split weight across GPUs by rows (parallelized)\n- tensor: split weights and KV across GPUs (parallelized, EXPERIMENTAL)\n(env: LLAMA_ARG_SPLIT_MODE)",
+      "choiceLabels": {
+        "none": "Без / отключено",
+        "layer": "По слоям",
+        "row": "По строкам",
+        "tensor": "По тензорам (экспериментально)"
+      },
+      "guidance": {
+        "chat": "Для нескольких GPU начните с layer и подбора fit.",
+        "agent": "Сначала сравните задержку на одной GPU и нескольких: обмен между картами может замедлять короткие шаги агента."
+      }
+    },
+    {
+      "name": "--tensor-split",
+      "label": "Пропорции видеокарт",
+      "type": 0,
+      "default": null,
+      "priority": 21,
+      "group": "Common params",
+      "aliases": [
+        "-ts",
+        "--tensor-split"
+      ],
+      "negative": "",
+      "description": "Доли модели для GPU, например 3,1. Это относительные веса, а не объём в гигабайтах.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "fraction of the model to offload to each GPU, comma-separated list of proportions, e.g. 3,1\n(env: LLAMA_ARG_TENSOR_SPLIT)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--main-gpu",
+      "label": "Основная видеокарта",
+      "type": 1,
+      "default": 0,
+      "priority": 154,
+      "group": "Common params",
+      "aliases": [
+        "-mg",
+        "--main-gpu"
+      ],
+      "negative": "",
+      "description": "Индекс GPU: для всей модели при none, для промежуточных результатов и KV-кэша при row.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "the GPU to use for the model (with split-mode = none), or for intermediate results and KV (with split-mode = row) (default: 0)\n(env: LLAMA_ARG_MAIN_GPU)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--fit",
+      "label": "Автоподбор по памяти",
+      "type": 5,
+      "default": "on",
+      "priority": 16,
+      "group": "Common params",
+      "aliases": [
+        "-fit",
+        "--fit"
+      ],
+      "negative": "",
+      "description": "Разрешить llama.cpp корректировать незаданные параметры под свободную память ускорителей.",
+      "choices": [
+        "on",
+        "off"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to adjust unset arguments to fit in device memory ('on' or 'off', default: 'on')\n(env: LLAMA_ARG_FIT)",
+      "choiceLabels": {
+        "on": "Включено",
+        "off": "Выключено"
+      }
+    },
+    {
+      "name": "--fit-target",
+      "label": "Запас памяти каждой GPU",
+      "type": 0,
+      "default": "1024",
+      "priority": 17,
+      "group": "Common params",
+      "aliases": [
+        "-fitt",
+        "--fit-target"
+      ],
+      "negative": "",
+      "description": "Запас в МиБ на устройство. Одно число применяется ко всем, список через запятую задаёт отдельные значения.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "target margin per device for --fit, comma-separated list of values, single value is broadcast across all devices, default: 1024\n(env: LLAMA_ARG_FIT_TARGET)",
+      "choiceLabels": {},
+      "guidance": {
+        "chat": "Оставьте запас под рабочий стол и дополнительные модели.",
+        "agent": "Для проектора, draft-модели и параллельных запросов увеличьте резерв каждой GPU."
+      }
+    },
+    {
+      "name": "--fit-ctx",
+      "label": "Минимальный контекст подбора",
+      "type": 1,
+      "default": 4096,
+      "priority": 157,
+      "group": "Common params",
+      "aliases": [
+        "-fitc",
+        "--fit-ctx"
+      ],
+      "negative": "",
+      "description": "Нижняя граница контекста для автоматического fit, если контекст не зафиксирован явно.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "minimum ctx size that can be set by --fit option, default: 4096\n(env: LLAMA_ARG_FIT_CTX)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--check-tensors",
+      "label": "Проверка весов",
+      "type": 3,
+      "default": false,
+      "priority": 158,
+      "group": "Common params",
+      "aliases": [
+        "--check-tensors"
+      ],
+      "negative": "",
+      "description": "Проверить тензоры модели на некорректные значения.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "check model tensor data for invalid values (default: false)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--override-kv",
+      "label": "Переопределение метаданных",
+      "type": 0,
+      "default": null,
+      "priority": 159,
+      "group": "Common params",
+      "aliases": [
+        "--override-kv"
+      ],
+      "negative": "",
+      "description": "Изменить метаданные: ключ=тип:значение. Типы int, float, bool, str; записи разделяются запятыми.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "advanced option to override model metadata by key. to specify multiple overrides, either use comma-separated values.\ntypes: int, float, bool, str. example: --override-kv tokenizer.ggml.add_bos_token=bool:false,tokenizer.ggml.add_eos_token=bool:false",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--op-offload",
+      "label": "Операции хоста на GPU",
+      "type": 3,
+      "default": true,
+      "priority": 160,
+      "group": "Common params",
+      "aliases": [
+        "--op-offload",
+        "--no-op-offload"
+      ],
+      "negative": "--no-op-offload",
+      "description": "Разрешить перенос поддерживаемых операций CPU на ускоритель.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to offload host tensor operations to device (default: true)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--lora",
+      "label": "Адаптеры LoRA",
+      "type": 4,
+      "default": null,
+      "priority": 20,
+      "group": "Common params",
+      "aliases": [
+        "--lora"
+      ],
+      "negative": "",
+      "description": "Пути к LoRA-адаптерам через запятую. Адаптеры должны соответствовать базовой модели.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "path to LoRA adapter (use comma-separated values to load multiple adapters)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--lora-scaled",
+      "label": "LoRA с коэффициентами",
+      "type": 4,
+      "default": null,
+      "priority": 162,
+      "group": "Common params",
+      "aliases": [
+        "--lora-scaled"
+      ],
+      "negative": "",
+      "description": "Пути и масштабы адаптеров: файл:коэффициент через запятую.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "path to LoRA adapter with user defined scaling (format: FNAME:SCALE,...)\nnote: use comma-separated values",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--control-vector",
+      "label": "Управляющие векторы",
+      "type": 4,
+      "default": null,
+      "priority": 163,
+      "group": "Common params",
+      "aliases": [
+        "--control-vector"
+      ],
+      "negative": "",
+      "description": "Пути к управляющим векторам через запятую.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "add a control vector\nnote: use comma-separated values to add multiple control vectors",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--control-vector-scaled",
+      "label": "Масштабы управляющих векторов",
+      "type": 4,
+      "default": null,
+      "priority": 164,
+      "group": "Common params",
+      "aliases": [
+        "--control-vector-scaled"
+      ],
+      "negative": "",
+      "description": "Управляющие векторы: файл:коэффициент через запятую.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "add a control vector with user defined scaling SCALE\nnote: use comma-separated values (format: FNAME:SCALE,...)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--control-vector-layer-range",
+      "label": "Слои управляющего вектора",
+      "type": 6,
+      "default": null,
+      "priority": 165,
+      "group": "Common params",
+      "aliases": [
+        "--control-vector-layer-range"
+      ],
+      "negative": "",
+      "description": "Два числа: первый и последний слой применения вектора включительно.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "layer range to apply the control vector(s) to, start and end inclusive",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--model",
+      "label": "Основная модель",
+      "type": 4,
+      "default": null,
+      "priority": 1,
+      "group": "Common params",
+      "aliases": [
+        "-m",
+        "--model"
+      ],
+      "negative": "",
+      "description": "Путь к локальному GGUF-файлу модели.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "model path to load\n(env: LLAMA_ARG_MODEL)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--model-url",
+      "label": "Адрес загрузки модели",
+      "type": 0,
+      "default": null,
+      "priority": 167,
+      "group": "Common params",
+      "aliases": [
+        "-mu",
+        "--model-url"
+      ],
+      "negative": "",
+      "description": "URL для загрузки файла модели.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "model download url (default: unused)\n(env: LLAMA_ARG_MODEL_URL)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--docker-repo",
+      "label": "Репозиторий модели Docker",
+      "type": 0,
+      "default": null,
+      "priority": 168,
+      "group": "Common params",
+      "aliases": [
+        "-dr",
+        "--docker-repo"
+      ],
+      "negative": "",
+      "description": "Модель Docker Hub: репозиторий/модель:квантование; по умолчанию ai/ и тег latest.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Docker Hub model repository. repo is optional, default to ai/. quant is optional, default to :latest.\nexample: gemma3\n(default: unused)\n(env: LLAMA_ARG_DOCKER_REPO)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--hf-repo",
+      "label": "Репозиторий Hugging Face",
+      "type": 0,
+      "default": null,
+      "priority": 169,
+      "group": "Common params",
+      "aliases": [
+        "-hf",
+        "-hfr",
+        "--hf-repo"
+      ],
+      "negative": "",
+      "description": "Репозиторий пользователь/модель:квантование. Проектор может скачиваться автоматически.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Hugging Face model repository; quant is optional, case-insensitive, default to Q4_K_M, or falls back to the first file in the repo if Q4_K_M doesn't exist.\nmmproj is also downloaded automatically if available. to disable, add --no-mmproj\nexample: ggml-org/GLM-4.7-Flash-GGUF:Q4_K_M\n(default: unused)\n(env: LLAMA_ARG_HF_REPO)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--hf-file",
+      "label": "Файл Hugging Face",
+      "type": 4,
+      "default": null,
+      "priority": 170,
+      "group": "Common params",
+      "aliases": [
+        "-hff",
+        "--hf-file"
+      ],
+      "negative": "",
+      "description": "Файл в репозитории; имеет приоритет перед квантованием, указанным в имени репозитория.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Hugging Face model file. If specified, it will override the quant in --hf-repo (default: unused)\n(env: LLAMA_ARG_HF_FILE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--hf-token",
+      "label": "Токен Hugging Face",
+      "type": 0,
+      "default": null,
+      "priority": 171,
+      "group": "Common params",
+      "aliases": [
+        "-hft",
+        "--hf-token"
+      ],
+      "negative": "",
+      "description": "Токен доступа к закрытым моделям; по умолчанию берётся из HF_TOKEN.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Hugging Face access token (default: value from HF_TOKEN environment variable)\n(env: HF_TOKEN)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--log-disable",
+      "label": "Отключение журнала",
+      "type": 3,
+      "default": null,
+      "priority": 172,
+      "group": "Common params",
+      "aliases": [
+        "--log-disable"
+      ],
+      "negative": "",
+      "description": "Не выводить сообщения журнала llama.cpp.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Log disable",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--log-file",
+      "label": "Файл журнала",
+      "type": 4,
+      "default": null,
+      "priority": 173,
+      "group": "Common params",
+      "aliases": [
+        "--log-file"
+      ],
+      "negative": "",
+      "description": "Путь к файлу записи журнала.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Log to file\n(env: LLAMA_ARG_LOG_FILE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--log-jsonl",
+      "label": "Журнал в формате JSONL",
+      "type": 3,
+      "default": false,
+      "priority": 174,
+      "group": "Common params",
+      "aliases": [
+        "--log-jsonl",
+        "--no-log-jsonl"
+      ],
+      "negative": "--no-log-jsonl",
+      "description": "Выводить отдельные JSON-строки без цветного оформления.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Log as JSONL (one JSON object per line) to stdout, this also disables colored logging (default: disabled)\n(env: LLAMA_ARG_LOG_JSONL)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--log-colors",
+      "label": "Цвет журнала",
+      "type": 5,
+      "default": "auto",
+      "priority": 175,
+      "group": "Common params",
+      "aliases": [
+        "--log-colors"
+      ],
+      "negative": "",
+      "description": "Включить, выключить или автоматически выбирать цветное оформление.",
+      "choices": [
+        "on",
+        "off",
+        "auto"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Set colored logging ('on', 'off', or 'auto', default: 'auto')\n'auto' enables colors when output is to a terminal\n(env: LLAMA_ARG_LOG_COLORS)",
+      "choiceLabels": {
+        "on": "Включено",
+        "off": "Выключено",
+        "auto": "Автоматически"
+      }
+    },
+    {
+      "name": "--verbose",
+      "label": "Подробная диагностика",
+      "type": 3,
+      "default": null,
+      "priority": 176,
+      "group": "Common params",
+      "aliases": [
+        "-v",
+        "--verbose",
+        "--log-verbose"
+      ],
+      "negative": "",
+      "description": "Выводить все сообщения, включая отладочные.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Set verbosity level to infinity (i.e. log all messages, useful for debugging)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--offline",
+      "label": "Автономная загрузка",
+      "type": 3,
+      "default": null,
+      "priority": 177,
+      "group": "Common params",
+      "aliases": [
+        "--offline"
+      ],
+      "negative": "",
+      "description": "Использовать локальный кэш и запретить сетевые загрузки llama.cpp.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Offline mode: forces use of cache, prevents network access\n(env: LLAMA_ARG_OFFLINE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--verbosity",
+      "label": "Уровень журнала",
+      "type": 1,
+      "default": 3,
+      "priority": 178,
+      "group": "Common params",
+      "aliases": [
+        "-lv",
+        "--verbosity",
+        "--log-verbosity"
+      ],
+      "negative": "",
+      "description": "0 общий, 1 ошибки, 2 предупреждения, 3 информация, 4 трассировка, 5 отладка.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Set the verbosity threshold. Messages with a higher verbosity will be ignored. Values:\n - 0: generic output\n - 1: error\n - 2: warning\n - 3: info\n - 4: trace (more info)\n - 5: debug\n(default: 3)\n\n(env: LLAMA_ARG_LOG_VERBOSITY)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--log-prefix",
+      "label": "Префикс сообщений",
+      "type": 3,
+      "default": null,
+      "priority": 179,
+      "group": "Common params",
+      "aliases": [
+        "--log-prefix",
+        "--no-log-prefix"
+      ],
+      "negative": "--no-log-prefix",
+      "description": "Добавлять к сообщениям журнала префикс источника.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Enable prefix in log messages\n(env: LLAMA_ARG_LOG_PREFIX)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--log-timestamps",
+      "label": "Время в журнале",
+      "type": 3,
+      "default": null,
+      "priority": 180,
+      "group": "Common params",
+      "aliases": [
+        "--log-timestamps",
+        "--no-log-timestamps"
+      ],
+      "negative": "--no-log-timestamps",
+      "description": "Добавлять временные метки к сообщениям журнала.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Enable timestamps in log messages\n(env: LLAMA_ARG_LOG_TIMESTAMPS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-type-k",
+      "label": "Ключи кэша черновой модели",
+      "type": 5,
+      "default": "f16",
+      "priority": 181,
+      "group": "Common params",
+      "aliases": [
+        "--spec-draft-type-k",
+        "-ctkd",
+        "--cache-type-k-draft"
+      ],
+      "negative": "",
+      "description": "Тип ключей KV-кэша черновой модели.",
+      "choices": [
+        "f32",
+        "f16",
+        "bf16",
+        "q8_0",
+        "q4_0",
+        "q4_1",
+        "iq4_nl",
+        "q5_0",
+        "q5_1"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "KV cache data type for K for the draft model\nallowed values: f32, f16, bf16, q8_0, q4_0, q4_1, iq4_nl, q5_0, q5_1\n(default: f16)\n(env: LLAMA_ARG_SPEC_DRAFT_CACHE_TYPE_K)",
+      "choiceLabels": {
+        "f32": "f32",
+        "f16": "f16",
+        "bf16": "bf16",
+        "q8_0": "q8_0",
+        "q4_0": "q4_0",
+        "q4_1": "q4_1",
+        "iq4_nl": "iq4_nl",
+        "q5_0": "q5_0",
+        "q5_1": "q5_1"
+      }
+    },
+    {
+      "name": "--spec-draft-type-v",
+      "label": "Значения кэша черновой модели",
+      "type": 5,
+      "default": "f16",
+      "priority": 182,
+      "group": "Common params",
+      "aliases": [
+        "--spec-draft-type-v",
+        "-ctvd",
+        "--cache-type-v-draft"
+      ],
+      "negative": "",
+      "description": "Тип значений KV-кэша черновой модели.",
+      "choices": [
+        "f32",
+        "f16",
+        "bf16",
+        "q8_0",
+        "q4_0",
+        "q4_1",
+        "iq4_nl",
+        "q5_0",
+        "q5_1"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "KV cache data type for V for the draft model\nallowed values: f32, f16, bf16, q8_0, q4_0, q4_1, iq4_nl, q5_0, q5_1\n(default: f16)\n(env: LLAMA_ARG_SPEC_DRAFT_CACHE_TYPE_V)",
+      "choiceLabels": {
+        "f32": "f32",
+        "f16": "f16",
+        "bf16": "bf16",
+        "q8_0": "q8_0",
+        "q4_0": "q4_0",
+        "q4_1": "q4_1",
+        "iq4_nl": "iq4_nl",
+        "q5_0": "q5_0",
+        "q5_1": "q5_1"
+      }
+    },
+    {
+      "name": "--samplers",
+      "label": "Цепочка сэмплеров",
+      "type": 0,
+      "default": "penalties;dry;top_n_sigma;top_k;typ_p;top_p;min_p;xtc;temperature",
+      "priority": 183,
+      "group": "Sampling params",
+      "aliases": [
+        "--samplers"
+      ],
+      "negative": "",
+      "description": "Последовательность алгоритмов выбора токена; названия разделяются точкой с запятой.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "samplers that will be used for generation in the order, separated by ';'\n(default: penalties;dry;top_n_sigma;top_k;typ_p;top_p;min_p;xtc;temperature)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--seed",
+      "label": "Зерно случайности",
+      "type": 1,
+      "default": -1,
+      "priority": 184,
+      "group": "Sampling params",
+      "aliases": [
+        "-s",
+        "--seed"
+      ],
+      "negative": "",
+      "description": "Начальное значение генератора случайных чисел; -1 выбирает случайное зерно.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "RNG seed (default: -1, use random seed for -1)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--sampler-seq",
+      "label": "Краткая цепочка сэмплеров",
+      "type": 0,
+      "default": "edskypmxt",
+      "priority": 185,
+      "group": "Sampling params",
+      "aliases": [
+        "--sampler-seq",
+        "--sampling-seq"
+      ],
+      "negative": "",
+      "description": "Сокращённая последовательность алгоритмов выбора токена.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "simplified sequence for samplers that will be used (default: edskypmxt)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--ignore-eos",
+      "label": "Игнорирование конца ответа",
+      "type": 3,
+      "default": null,
+      "priority": 186,
+      "group": "Sampling params",
+      "aliases": [
+        "--ignore-eos"
+      ],
+      "negative": "",
+      "description": "Продолжать генерацию после токена конца последовательности.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "ignore end of stream token and continue generating (implies --logit-bias EOS-inf)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--temp",
+      "label": "Температура",
+      "type": 2,
+      "default": 0.8,
+      "priority": 13,
+      "group": "Sampling params",
+      "aliases": [
+        "--temp",
+        "--temperature"
+      ],
+      "negative": "",
+      "description": "Степень случайности ответа. Используйте диапазон, рекомендованный автором конкретной модели.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "temperature (default: 0.80)\n(env: LLAMA_ARG_TEMPERATURE)",
+      "choiceLabels": {},
+      "guidance": {
+        "chat": "Следуйте карточке модели; пример 0,7 подходит не всем семействам.",
+        "agent": "Не считайте низкую температуру универсальным правилом: reasoning-модели могут требовать других значений."
+      }
+    },
+    {
+      "name": "--top-k",
+      "label": "Ограничение кандидатов",
+      "type": 1,
+      "default": 40,
+      "priority": 188,
+      "group": "Sampling params",
+      "aliases": [
+        "--top-k"
+      ],
+      "negative": "",
+      "description": "Оставить K наиболее вероятных токенов; 0 отключает фильтр.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "top-k sampling (default: 40, 0 = disabled)\n(env: LLAMA_ARG_TOP_K)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--top-p",
+      "label": "Накопленная вероятность",
+      "type": 2,
+      "default": 0.95,
+      "priority": 14,
+      "group": "Sampling params",
+      "aliases": [
+        "--top-p"
+      ],
+      "negative": "",
+      "description": "Оставить токены с суммарной вероятностью P; 1 отключает фильтр.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "top-p sampling (default: 0.95, 1.0 = disabled)\n(env: LLAMA_ARG_TOP_P)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--min-p",
+      "label": "Минимальная вероятность",
+      "type": 2,
+      "default": 0.05,
+      "priority": 15,
+      "group": "Sampling params",
+      "aliases": [
+        "--min-p"
+      ],
+      "negative": "",
+      "description": "Отсечь токены с вероятностью ниже доли от наиболее вероятного; 0 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "min-p sampling (default: 0.05, 0.0 = disabled)\n(env: LLAMA_ARG_MIN_P)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--top-nsigma",
+      "label": "Фильтр сигма",
+      "type": 2,
+      "default": -1.0,
+      "priority": 191,
+      "group": "Sampling params",
+      "aliases": [
+        "--top-nsigma",
+        "--top-n-sigma"
+      ],
+      "negative": "",
+      "description": "Сэмплирование по числу стандартных отклонений; отрицательное значение отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "top-n-sigma sampling (default: -1.00, -1.0 = disabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--xtc-probability",
+      "label": "Вероятность XTC",
+      "type": 2,
+      "default": 0.0,
+      "priority": 192,
+      "group": "Sampling params",
+      "aliases": [
+        "--xtc-probability"
+      ],
+      "negative": "",
+      "description": "Вероятность применения XTC; 0 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "xtc probability (default: 0.00, 0.0 = disabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--xtc-threshold",
+      "label": "Порог XTC",
+      "type": 2,
+      "default": 0.1,
+      "priority": 193,
+      "group": "Sampling params",
+      "aliases": [
+        "--xtc-threshold"
+      ],
+      "negative": "",
+      "description": "Порог вероятности токенов XTC; 1 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "xtc threshold (default: 0.10, 1.0 = disabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--typical",
+      "label": "Типичность токенов",
+      "type": 2,
+      "default": 1.0,
+      "priority": 194,
+      "group": "Sampling params",
+      "aliases": [
+        "--typical",
+        "--typical-p"
+      ],
+      "negative": "",
+      "description": "Параметр локально типичного сэмплирования; 1 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "locally typical sampling, parameter p (default: 1.00, 1.0 = disabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--repeat-last-n",
+      "label": "Окно проверки повторов",
+      "type": 1,
+      "default": 64,
+      "priority": 195,
+      "group": "Sampling params",
+      "aliases": [
+        "--repeat-last-n"
+      ],
+      "negative": "",
+      "description": "Число последних токенов для штрафа за повторы; 0 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "last n tokens to consider for penalize (default: 64, 0 = disabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--repeat-penalty",
+      "label": "Штраф за повторы",
+      "type": 2,
+      "default": 1.0,
+      "priority": 196,
+      "group": "Sampling params",
+      "aliases": [
+        "--repeat-penalty"
+      ],
+      "negative": "",
+      "description": "Множитель штрафа; 1 отключает. Сильный штраф может портить код.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "penalize repeat sequence of tokens (default: 1.00, 1.0 = disabled)\n(env: LLAMA_ARG_REPEAT_PENALTY)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--presence-penalty",
+      "label": "Штраф за присутствие",
+      "type": 2,
+      "default": 0.0,
+      "priority": 197,
+      "group": "Sampling params",
+      "aliases": [
+        "--presence-penalty"
+      ],
+      "negative": "",
+      "description": "Добавочный штраф уже присутствующим токенам; 0 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "repeat alpha presence penalty (default: 0.00, 0.0 = disabled)\n(env: LLAMA_ARG_PRESENCE_PENALTY)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--frequency-penalty",
+      "label": "Штраф за частоту",
+      "type": 2,
+      "default": 0.0,
+      "priority": 198,
+      "group": "Sampling params",
+      "aliases": [
+        "--frequency-penalty"
+      ],
+      "negative": "",
+      "description": "Штраф, зависящий от частоты появления токена; 0 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "repeat alpha frequency penalty (default: 0.00, 0.0 = disabled)\n(env: LLAMA_ARG_FREQUENCY_PENALTY)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--dry-multiplier",
+      "label": "Сила подавления повторов DRY",
+      "type": 1,
+      "default": 0,
+      "priority": 199,
+      "group": "Sampling params",
+      "aliases": [
+        "--dry-multiplier"
+      ],
+      "negative": "",
+      "description": "Множитель штрафа за повторяющиеся последовательности; 0 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set DRY sampling multiplier (default: 0.00, 0.0 = disabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--dry-base",
+      "label": "Основание DRY",
+      "type": 1,
+      "default": 1,
+      "priority": 200,
+      "group": "Sampling params",
+      "aliases": [
+        "--dry-base"
+      ],
+      "negative": "",
+      "description": "Основание экспоненциального штрафа DRY.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set DRY sampling base value (default: 1.75)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--dry-allowed-length",
+      "label": "Допустимый повтор DRY",
+      "type": 1,
+      "default": 2,
+      "priority": 201,
+      "group": "Sampling params",
+      "aliases": [
+        "--dry-allowed-length"
+      ],
+      "negative": "",
+      "description": "Длина повторяющейся последовательности без штрафа DRY.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set allowed length for DRY sampling (default: 2)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--dry-penalty-last-n",
+      "label": "Окно алгоритма DRY",
+      "type": 1,
+      "default": 64,
+      "priority": 202,
+      "group": "Sampling params",
+      "aliases": [
+        "--dry-penalty-last-n"
+      ],
+      "negative": "",
+      "description": "Число последних токенов, учитываемых DRY; 0 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set DRY penalty for the last n tokens (default: 64, 0 = disable)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--dry-sequence-breaker",
+      "label": "Разделители DRY",
+      "type": 0,
+      "default": null,
+      "priority": 203,
+      "group": "Sampling params",
+      "aliases": [
+        "--dry-sequence-breaker"
+      ],
+      "negative": "",
+      "description": "Строки, прерывающие последовательность DRY; none исключает все разделители.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "add sequence breaker for DRY sampling, clearing out default breakers ('\\n', ':', '\"', '*') in the process; use \"none\" to not use any sequence breakers",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--adaptive-target",
+      "label": "Цель адаптивного сэмплирования",
+      "type": 2,
+      "default": -1.0,
+      "priority": 204,
+      "group": "Sampling params",
+      "aliases": [
+        "--adaptive-target"
+      ],
+      "negative": "",
+      "description": "Целевая вероятность adaptive-p от 0 до 1; отрицательное значение отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "adaptive-p: select tokens near this probability (valid range 0.0 to 1.0; negative = disabled) (default: -1.00)\n(more info)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--adaptive-decay",
+      "label": "Инерция адаптивного сэмплирования",
+      "type": 2,
+      "default": 0.9,
+      "priority": 205,
+      "group": "Sampling params",
+      "aliases": [
+        "--adaptive-decay"
+      ],
+      "negative": "",
+      "description": "Затухание adaptive-p от 0 до 0,99; меньшее значение быстрее реагирует.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "adaptive-p: decay rate for target adaptation over time. lower values are more reactive, higher values are more stable.\n(valid range 0.0 to 0.99) (default: 0.90)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--dynatemp-range",
+      "label": "Диапазон динамической температуры",
+      "type": 2,
+      "default": 0.0,
+      "priority": 206,
+      "group": "Sampling params",
+      "aliases": [
+        "--dynatemp-range"
+      ],
+      "negative": "",
+      "description": "Ширина изменения температуры; 0 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "dynamic temperature range (default: 0.00, 0.0 = disabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--dynatemp-exp",
+      "label": "Показатель динамической температуры",
+      "type": 2,
+      "default": 1.0,
+      "priority": 207,
+      "group": "Sampling params",
+      "aliases": [
+        "--dynatemp-exp"
+      ],
+      "negative": "",
+      "description": "Показатель степени динамического изменения температуры.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "dynamic temperature exponent (default: 1.00)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--mirostat",
+      "label": "Режим Mirostat",
+      "type": 1,
+      "default": 0,
+      "priority": 208,
+      "group": "Sampling params",
+      "aliases": [
+        "--mirostat"
+      ],
+      "negative": "",
+      "description": "0 — выключено, 1 — Mirostat, 2 — Mirostat 2.0. Меняет взаимодействие с другими сэмплерами.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use Mirostat sampling.\nTop K, Nucleus and Locally Typical samplers are ignored if used.\n(default: 0, 0 = disabled, 1 = Mirostat, 2 = Mirostat 2.0)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--mirostat-lr",
+      "label": "Скорость обучения Mirostat",
+      "type": 2,
+      "default": 0.1,
+      "priority": 209,
+      "group": "Sampling params",
+      "aliases": [
+        "--mirostat-lr"
+      ],
+      "negative": "",
+      "description": "Коэффициент обучения алгоритма Mirostat.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Mirostat learning rate, parameter eta (default: 0.10)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--mirostat-ent",
+      "label": "Целевая энтропия Mirostat",
+      "type": 2,
+      "default": 5.0,
+      "priority": 210,
+      "group": "Sampling params",
+      "aliases": [
+        "--mirostat-ent"
+      ],
+      "negative": "",
+      "description": "Целевой уровень неопределённости алгоритма Mirostat.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Mirostat target entropy, parameter tau (default: 5.00)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--logit-bias",
+      "label": "Смещение вероятностей токенов",
+      "type": 0,
+      "default": null,
+      "priority": 211,
+      "group": "Sampling params",
+      "aliases": [
+        "-l",
+        "--logit-bias"
+      ],
+      "negative": "",
+      "description": "Изменить вероятность токена по его ID и смещению, например 15043+1.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "modifies the likelihood of token appearing in the completion,\ni.e. `--logit-bias 15043+1` to increase likelihood of token ' Hello',\nor `--logit-bias 15043-1` to decrease likelihood of token ' Hello'",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--grammar",
+      "label": "Грамматика ответа",
+      "type": 0,
+      "default": null,
+      "priority": 212,
+      "group": "Sampling params",
+      "aliases": [
+        "--grammar"
+      ],
+      "negative": "",
+      "description": "Ограничить структуру ответа грамматикой BNF.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "BNF-like grammar to constrain generations (see samples in grammars/ dir)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--grammar-file",
+      "label": "Файл грамматики",
+      "type": 4,
+      "default": null,
+      "priority": 213,
+      "group": "Sampling params",
+      "aliases": [
+        "--grammar-file"
+      ],
+      "negative": "",
+      "description": "Путь к грамматике, ограничивающей генерацию.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "file to read grammar from",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--json-schema",
+      "label": "Схема JSON-ответа",
+      "type": 0,
+      "default": null,
+      "priority": 214,
+      "group": "Sampling params",
+      "aliases": [
+        "-j",
+        "--json-schema"
+      ],
+      "negative": "",
+      "description": "Схема JSON Schema, которой должен соответствовать ответ.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "JSON schema to constrain generations (https://json-schema.org/), e.g. `{\"type\": \"object\"}` for any JSON object",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--json-schema-file",
+      "label": "Файл схемы JSON",
+      "type": 4,
+      "default": null,
+      "priority": 215,
+      "group": "Sampling params",
+      "aliases": [
+        "-jf",
+        "--json-schema-file"
+      ],
+      "negative": "",
+      "description": "Путь к JSON Schema для ограничения структуры ответа.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "File containing a JSON schema to constrain generations (https://json-schema.org/), e.g. `{\"type\": \"object\"}` for any JSON object",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--backend-sampling",
+      "label": "Выбор токенов на ускорителе",
+      "type": 3,
+      "default": false,
+      "priority": 216,
+      "group": "Sampling params",
+      "aliases": [
+        "-bs",
+        "--backend-sampling"
+      ],
+      "negative": "",
+      "description": "Экспериментальный перенос сэмплирования на вычислительный backend.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "enable backend sampling (experimental) (default: disabled)\n(env: LLAMA_ARG_BACKEND_SAMPLING)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--lookup-cache-static",
+      "label": "Статический кэш поиска",
+      "type": 4,
+      "default": null,
+      "priority": 217,
+      "group": "Server-specific params",
+      "aliases": [
+        "-lcs",
+        "--lookup-cache-static"
+      ],
+      "negative": "",
+      "description": "Неизменяемый кэш генерации с поиском последовательностей.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "path to static lookup cache to use for lookup decoding (not updated by generation)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--lookup-cache-dynamic",
+      "label": "Динамический кэш поиска",
+      "type": 4,
+      "default": null,
+      "priority": 218,
+      "group": "Server-specific params",
+      "aliases": [
+        "-lcd",
+        "--lookup-cache-dynamic"
+      ],
+      "negative": "",
+      "description": "Кэш поиска последовательностей, обновляемый во время генерации.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "path to dynamic lookup cache to use for lookup decoding (updated by generation)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--kv-unified-per-slot",
+      "label": "Контекст одного слота",
+      "type": 1,
+      "default": null,
+      "priority": 219,
+      "group": "Server-specific params",
+      "aliases": [
+        "--kv-unified-per-slot"
+      ],
+      "negative": "",
+      "description": "Ограничение токенов на слот. Без общего контекста KV-пул равен числу слотов, умноженному на это значение.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "context limit per parallel slot (default: unset, behavior unchanged).\nwhen set without -c/--ctx-size, the shared KV pool is sized to n_parallel*N\n(env: LLAMA_ARG_KV_UNIFIED_PER_SLOT)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--ctx-checkpoints",
+      "label": "Контрольные точки контекста",
+      "type": 1,
+      "default": 32,
+      "priority": 220,
+      "group": "Server-specific params",
+      "aliases": [
+        "-ctxcp",
+        "--ctx-checkpoints",
+        "--swa-checkpoints"
+      ],
+      "negative": "",
+      "description": "Максимум контрольных точек для каждого слота.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "max number of context checkpoints to create per slot (default: 32)(more info)\n(env: LLAMA_ARG_CTX_CHECKPOINTS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--checkpoint-min-step",
+      "label": "Шаг контрольных точек",
+      "type": 1,
+      "default": 8192,
+      "priority": 221,
+      "group": "Server-specific params",
+      "aliases": [
+        "-cms",
+        "--checkpoint-min-step"
+      ],
+      "negative": "",
+      "description": "Минимальный интервал в токенах; 0 снимает ограничение.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "minimum spacing between context checkpoints in tokens (default: 8192, 0 = no minimum)\n(env: LLAMA_ARG_CHECKPOINT_MIN_SPACING_NT)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cache-ram",
+      "label": "Кэш запросов в RAM",
+      "type": 1,
+      "default": 8192,
+      "priority": 222,
+      "group": "Server-specific params",
+      "aliases": [
+        "-cram",
+        "--cache-ram"
+      ],
+      "negative": "",
+      "description": "Максимальный размер кэша в МиБ; -1 без ограничения, 0 отключает с учётом поведения модели.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set the maximum cache size in MiB (default: 8192, 0 for decision models, -1 - no limit, 0 - disable)(more info)\n(env: LLAMA_ARG_CACHE_RAM)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--kv-unified",
+      "label": "Общий буфер KV-кэша",
+      "type": 3,
+      "default": null,
+      "priority": 223,
+      "group": "Server-specific params",
+      "aliases": [
+        "-kvu",
+        "--kv-unified",
+        "-no-kvu",
+        "--no-kv-unified"
+      ],
+      "negative": "--no-kv-unified",
+      "description": "Использовать общий KV-буфер для всех последовательностей.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use single unified KV buffer shared across all sequences (default: enabled if number of slots is auto)\n(env: LLAMA_ARG_KV_UNIFIED)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cache-idle-slots",
+      "label": "Кэширование неактивных слотов",
+      "type": 3,
+      "default": null,
+      "priority": 224,
+      "group": "Server-specific params",
+      "aliases": [
+        "--cache-idle-slots",
+        "--no-cache-idle-slots"
+      ],
+      "negative": "--no-cache-idle-slots",
+      "description": "Сохранять неактивные слоты в кэш запросов и освобождать их общий KV-кэш.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "save idle slots to the prompt cache on new task, and clear them when using unified KV (default: enabled, requires cache-ram)\n(env: LLAMA_ARG_CACHE_IDLE_SLOTS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--context-shift",
+      "label": "Сдвиг контекста",
+      "type": 3,
+      "default": false,
+      "priority": 225,
+      "group": "Server-specific params",
+      "aliases": [
+        "--context-shift",
+        "--no-context-shift"
+      ],
+      "negative": "--no-context-shift",
+      "description": "Удалять старые токены при заполнении контекста. В агентских задачах это может потерять ранние инструкции.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to use context shift on infinite text generation (default: disabled)\n(env: LLAMA_ARG_CONTEXT_SHIFT)",
+      "choiceLabels": {},
+      "guidance": {
+        "chat": "При отключении клиент должен сокращать историю по достижении лимита.",
+        "agent": "Автоматическое удаление старых токенов может потерять инструкции и результаты инструментов."
+      }
+    },
+    {
+      "name": "--reverse-prompt",
+      "label": "Стоп-строка",
+      "type": 0,
+      "default": null,
+      "priority": 226,
+      "group": "Server-specific params",
+      "aliases": [
+        "-r",
+        "--reverse-prompt"
+      ],
+      "negative": "",
+      "description": "Остановить генерацию при появлении заданной строки.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "halt generation at PROMPT, return control in interactive mode",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--special",
+      "label": "Специальные токены в ответе",
+      "type": 3,
+      "default": false,
+      "priority": 227,
+      "group": "Server-specific params",
+      "aliases": [
+        "-sp",
+        "--special"
+      ],
+      "negative": "",
+      "description": "Показывать специальные токены модели в выводе.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "special tokens output enabled (default: false)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--warmup",
+      "label": "Прогрев модели",
+      "type": 3,
+      "default": true,
+      "priority": 228,
+      "group": "Server-specific params",
+      "aliases": [
+        "--warmup",
+        "--no-warmup"
+      ],
+      "negative": "--no-warmup",
+      "description": "Выполнить пробный проход перед приёмом запросов.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to perform warmup with an empty run (default: enabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spm-infill",
+      "label": "Порядок вставки кода SPM",
+      "type": 3,
+      "default": false,
+      "priority": 229,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spm-infill"
+      ],
+      "negative": "",
+      "description": "Использовать порядок суффикс-префикс-середина для подходящих моделей вставки кода.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use Suffix/Prefix/Middle pattern for infill (instead of Prefix/Suffix/Middle) as some models prefer this. (default: disabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--pooling",
+      "label": "Объединение эмбеддингов",
+      "type": 5,
+      "default": null,
+      "priority": 230,
+      "group": "Server-specific params",
+      "aliases": [
+        "--pooling"
+      ],
+      "negative": "",
+      "description": "Метод объединения представлений токенов: none, mean, cls, last или rank.",
+      "choices": [
+        "none",
+        "mean",
+        "cls",
+        "last",
+        "rank"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "pooling type for embeddings, use model default if unspecified\n(env: LLAMA_ARG_POOLING)",
+      "choiceLabels": {
+        "none": "Без / отключено",
+        "mean": "mean",
+        "cls": "cls",
+        "last": "last",
+        "rank": "rank"
+      }
+    },
+    {
+      "name": "--parallel",
+      "label": "Параллельные запросы",
+      "type": 1,
+      "default": -1,
+      "priority": 7,
+      "group": "Server-specific params",
+      "aliases": [
+        "-np",
+        "--parallel"
+      ],
+      "negative": "",
+      "description": "Число одновременных слотов; -1 автовыбор. Больше слотов требует больше контекста и памяти.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "number of server slots (default: -1, -1 = auto)\n(env: LLAMA_ARG_N_PARALLEL)",
+      "choiceLabels": {},
+      "guidance": {
+        "chat": "Для личного чата обычно достаточно одного слота.",
+        "agent": "Начните с одного слота; параллельные агенты умножают потребность в контексте и памяти."
+      }
+    },
+    {
+      "name": "--cont-batching",
+      "label": "Непрерывная пакетная обработка",
+      "type": 3,
+      "default": true,
+      "priority": 232,
+      "group": "Server-specific params",
+      "aliases": [
+        "-cb",
+        "--cont-batching",
+        "-nocb",
+        "--no-cont-batching"
+      ],
+      "negative": "--no-cont-batching",
+      "description": "Совместно обрабатывать токены нескольких запросов по мере поступления.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to enable continuous batching (a.k.a dynamic batching) (default: enabled)\n(env: LLAMA_ARG_CONT_BATCHING)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--mmproj",
+      "label": "Мультимодальный проектор",
+      "type": 4,
+      "default": null,
+      "priority": 18,
+      "group": "Server-specific params",
+      "aliases": [
+        "-mm",
+        "--mmproj"
+      ],
+      "negative": "",
+      "description": "Путь к проектору изображений или аудио, совместимому с основной моделью.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "path to a multimodal projector file. see tools/mtmd/README.md\nnote: if -hf is used, this argument can be omitted\n(env: LLAMA_ARG_MMPROJ)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--mmproj-url",
+      "label": "Адрес загрузки проектора",
+      "type": 0,
+      "default": null,
+      "priority": 234,
+      "group": "Server-specific params",
+      "aliases": [
+        "-mmu",
+        "--mmproj-url"
+      ],
+      "negative": "",
+      "description": "URL файла мультимодального проектора.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "URL to a multimodal projector file. see tools/mtmd/README.md\n(env: LLAMA_ARG_MMPROJ_URL)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--mmproj-auto",
+      "label": "Автовыбор проектора",
+      "type": 3,
+      "default": true,
+      "priority": 235,
+      "group": "Server-specific params",
+      "aliases": [
+        "--mmproj-auto",
+        "--no-mmproj",
+        "--no-mmproj-auto"
+      ],
+      "negative": "--no-mmproj",
+      "description": "Автоматически использовать доступный проектор, например при загрузке из Hugging Face.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to use multimodal projector file (if available), useful when using -hf (default: enabled)\n(env: LLAMA_ARG_MMPROJ_AUTO)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--mmproj-offload",
+      "label": "Проектор на GPU",
+      "type": 3,
+      "default": true,
+      "priority": 236,
+      "group": "Server-specific params",
+      "aliases": [
+        "--mmproj-offload",
+        "--no-mmproj-offload"
+      ],
+      "negative": "--no-mmproj-offload",
+      "description": "Разместить мультимодальный проектор на ускорителе.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to enable GPU offloading for multimodal projector (default: enabled)\n(env: LLAMA_ARG_MMPROJ_OFFLOAD)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--mmproj-device",
+      "label": "Видеокарта проектора",
+      "type": 0,
+      "default": null,
+      "priority": 237,
+      "group": "Server-specific params",
+      "aliases": [
+        "-mmdev",
+        "--mmproj-device"
+      ],
+      "negative": "",
+      "description": "Устройство проектора; none оставляет его на CPU.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "device to use for multimodal projector (none = don't offload, default: follows --device)\nuse --list-devices to see a list of available devices\n(env: MTMD_BACKEND_DEVICE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--image-min-tokens",
+      "label": "Минимум токенов изображения",
+      "type": 1,
+      "default": null,
+      "priority": 238,
+      "group": "Server-specific params",
+      "aliases": [
+        "--image-min-tokens"
+      ],
+      "negative": "",
+      "description": "Минимум токенов на изображение для моделей с динамическим разрешением.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "minimum number of tokens each image can take, only used by vision models with dynamic resolution (default: read from model)\n(env: LLAMA_ARG_IMAGE_MIN_TOKENS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--image-max-tokens",
+      "label": "Максимум токенов изображения",
+      "type": 1,
+      "default": null,
+      "priority": 239,
+      "group": "Server-specific params",
+      "aliases": [
+        "--image-max-tokens"
+      ],
+      "negative": "",
+      "description": "Лимит токенов изображения; уменьшение снижает детализацию и расход контекста.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "maximum number of tokens each image can take, only used by vision models with dynamic resolution (default: read from model)\n(env: LLAMA_ARG_IMAGE_MAX_TOKENS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--mtmd-batch-max-tokens",
+      "label": "Пакет кодирования изображений",
+      "type": 1,
+      "default": 1024,
+      "priority": 240,
+      "group": "Server-specific params",
+      "aliases": [
+        "--mtmd-batch-max-tokens"
+      ],
+      "negative": "",
+      "description": "Максимум токенов изображения в пакете кодирования.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "maximum number of image tokens per batch when encoding images (default: 1024)\n(env: LLAMA_ARG_MTMD_BATCH_MAX_TOKENS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--video-fps",
+      "label": "Частота кадров видео",
+      "type": 2,
+      "default": 4.0,
+      "priority": 241,
+      "group": "Server-specific params",
+      "aliases": [
+        "--video-fps"
+      ],
+      "negative": "",
+      "description": "Число кадров в секунду, отбираемых для анализа видео.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "target video frame rate (default: 4.0)\n(env: LLAMA_ARG_VIDEO_FPS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--video-timestamp-interval",
+      "label": "Интервал меток времени видео",
+      "type": 1,
+      "default": 5000,
+      "priority": 242,
+      "group": "Server-specific params",
+      "aliases": [
+        "--video-timestamp-interval"
+      ],
+      "negative": "",
+      "description": "Интервал в миллисекундах между текстовыми метками времени.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "interval in milliseconds between text timestamps (default: 5000)\n(env: LLAMA_ARG_VIDEO_TIMESTAMP_INTERVAL)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--video-ffmpeg-dir",
+      "label": "Папка FFmpeg",
+      "type": 4,
+      "default": null,
+      "priority": 243,
+      "group": "Server-specific params",
+      "aliases": [
+        "--video-ffmpeg-dir"
+      ],
+      "negative": "",
+      "description": "Папка с ffmpeg и ffprobe для видео.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "path to the directory containing ffmpeg and ffprobe (default: search in PATH)\n(env: LLAMA_ARG_VIDEO_FFMPEG_DIR)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--alias",
+      "label": "Имена модели в API",
+      "type": 0,
+      "default": null,
+      "priority": 244,
+      "group": "Server-specific params",
+      "aliases": [
+        "-a",
+        "--alias"
+      ],
+      "negative": "",
+      "description": "Псевдонимы модели через запятую для клиентских запросов.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set model name aliases, comma-separated (to be used by API)\n(env: LLAMA_ARG_ALIAS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--tags",
+      "label": "Метки модели",
+      "type": 0,
+      "default": null,
+      "priority": 245,
+      "group": "Server-specific params",
+      "aliases": [
+        "--tags"
+      ],
+      "negative": "",
+      "description": "Информационные метки через запятую; не участвуют в маршрутизации.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set model tags, comma-separated (informational, not used for routing)\n(env: LLAMA_ARG_TAGS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--embd-normalize",
+      "label": "Нормализация эмбеддингов",
+      "type": 1,
+      "default": 2,
+      "priority": 246,
+      "group": "Server-specific params",
+      "aliases": [
+        "--embd-normalize"
+      ],
+      "negative": "",
+      "description": "Нормализация: -1 без неё, 0 int16, 1 L1, 2 L2, больше 2 — p-норма.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "normalisation for embeddings (default: 2) (-1=none, 0=max absolute int16, 1=taxicab, 2=euclidean, >2=p-norm)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--host",
+      "label": "Адрес сервера",
+      "type": 0,
+      "default": "127.0.0.1",
+      "priority": 4,
+      "group": "Server-specific params",
+      "aliases": [
+        "--host"
+      ],
+      "negative": "",
+      "description": "Адреса через запятую или путь UNIX-сокета. 127.0.0.1 только локально; 0.0.0.0 — все IPv4-интерфейсы.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "IP addresses to listen on, comma-separated, or UNIX socket paths ending in .sock; with multiple TCP addresses, :: binds IPv6 only; overlapping addresses result in undefined behavior (default: 127.0.0.1)\n(env: LLAMA_ARG_HOST)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--port",
+      "label": "Порт сервера",
+      "type": 1,
+      "default": 9931,
+      "priority": 5,
+      "group": "Server-specific params",
+      "aliases": [
+        "--port"
+      ],
+      "negative": "",
+      "description": "TCP-порт HTTP-сервера llama.cpp.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "port to listen (default: 9931)\n(env: LLAMA_ARG_PORT)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--reuse-port",
+      "label": "Совместное использование порта",
+      "type": 3,
+      "default": false,
+      "priority": 249,
+      "group": "Server-specific params",
+      "aliases": [
+        "--reuse-port"
+      ],
+      "negative": "",
+      "description": "Разрешить нескольким сокетам привязываться к одному порту.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "allow multiple sockets to bind to the same port (default: disabled)\n(env: LLAMA_ARG_REUSE_PORT)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--path",
+      "label": "Папка веб-файлов",
+      "type": 4,
+      "default": "",
+      "priority": 250,
+      "group": "Server-specific params",
+      "aliases": [
+        "--path"
+      ],
+      "negative": "",
+      "description": "Папка статических файлов HTTP-сервера.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "path to serve static files from (default: )\n(env: LLAMA_ARG_STATIC_PATH)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cors-origins",
+      "label": "Разрешённые источники CORS",
+      "type": 0,
+      "default": "*",
+      "priority": 251,
+      "group": "Server-specific params",
+      "aliases": [
+        "--cors-origins"
+      ],
+      "negative": "",
+      "description": "Веб-источники через запятую; localhost ограничивает локальными источниками.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "comma-separated list of allowed origins for CORS (default: *)\nif set to special value 'localhost', reflect the Origin header only if it is localhost\n(env: LLAMA_ARG_CORS_ORIGINS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cors-methods",
+      "label": "Методы CORS",
+      "type": 0,
+      "default": "GET, POST, DELETE, OPTIONS",
+      "priority": 252,
+      "group": "Server-specific params",
+      "aliases": [
+        "--cors-methods"
+      ],
+      "negative": "",
+      "description": "Разрешённые HTTP-методы через запятую.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "comma-separated list of allowed methods for CORS (default: GET, POST, DELETE, OPTIONS)\n(env: LLAMA_ARG_CORS_METHODS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cors-headers",
+      "label": "Заголовки CORS",
+      "type": 0,
+      "default": "*",
+      "priority": 253,
+      "group": "Server-specific params",
+      "aliases": [
+        "--cors-headers"
+      ],
+      "negative": "",
+      "description": "Разрешённые HTTP-заголовки через запятую.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "comma-separated list of allowed headers for CORS (default: *)\n(env: LLAMA_ARG_CORS_HEADERS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cors-credentials",
+      "label": "Учётные данные CORS",
+      "type": 3,
+      "default": true,
+      "priority": 254,
+      "group": "Server-specific params",
+      "aliases": [
+        "--cors-credentials",
+        "--no-cors-credentials"
+      ],
+      "negative": "--no-cors-credentials",
+      "description": "Разрешить учётные данные в межсайтовых запросах.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to allow credentials for CORS (default: enabled)\nnote: if this is enabled and --cors-origins is set to * (default), the Origin header will be echoed back, and credentials will always be allowed\n(env: LLAMA_ARG_CORS_CREDENTIALS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--api-prefix",
+      "label": "Префикс API",
+      "type": 0,
+      "default": "",
+      "priority": 255,
+      "group": "Server-specific params",
+      "aliases": [
+        "--api-prefix"
+      ],
+      "negative": "",
+      "description": "Начальная часть путей API без завершающего слеша.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "prefix path the server serves from, without the trailing slash (default: )\n(env: LLAMA_ARG_API_PREFIX)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--ui-config",
+      "label": "Настройки веб-интерфейса JSON",
+      "type": 0,
+      "default": null,
+      "priority": 256,
+      "group": "Server-specific params",
+      "aliases": [
+        "--ui-config",
+        "--webui-config"
+      ],
+      "negative": "",
+      "description": "JSON-объект значений веб-интерфейса по умолчанию.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "JSON that provides default UI settings (overrides UI defaults)\n(env: LLAMA_ARG_UI_CONFIG)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--ui-config-file",
+      "label": "Файл настроек веб-интерфейса",
+      "type": 4,
+      "default": null,
+      "priority": 257,
+      "group": "Server-specific params",
+      "aliases": [
+        "--ui-config-file",
+        "--webui-config-file"
+      ],
+      "negative": "",
+      "description": "JSON-файл настроек встроенного веб-интерфейса.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "JSON file that provides default UI settings (overrides UI defaults)\n(env: LLAMA_ARG_UI_CONFIG_FILE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--ui-mcp-proxy",
+      "label": "Прокси MCP веб-интерфейса",
+      "type": 3,
+      "default": false,
+      "priority": 258,
+      "group": "Server-specific params",
+      "aliases": [
+        "--ui-mcp-proxy",
+        "--webui-mcp-proxy",
+        "--no-ui-mcp-proxy",
+        "--no-webui-mcp-proxy"
+      ],
+      "negative": "--no-ui-mcp-proxy",
+      "description": "Экспериментальный CORS-прокси MCP; для доверенной среды.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "experimental: whether to enable MCP CORS proxy - do not enable in untrusted environments (default: disabled)\n(env: LLAMA_ARG_UI_MCP_PROXY)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--tools",
+      "label": "Встроенные инструменты агента",
+      "type": 0,
+      "default": "no tools",
+      "priority": 259,
+      "group": "Server-specific params",
+      "aliases": [
+        "--tools"
+      ],
+      "negative": "",
+      "description": "Список серверных инструментов или all. Могут читать и изменять файлы, выполнять команды; включайте нужные в доверенной среде.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "experimental: whether to enable built-in tools for AI agents - do not enable in untrusted environments (default: no tools)\nspecify \"all\" to enable all tools\navailable tools: read_file, file_glob_search, grep_search, exec_shell_command, write_file, edit_file, get_info\nnote: for security reasons, this will limit --cors-origins to localhost by default\n(env: LLAMA_ARG_TOOLS)",
+      "choiceLabels": {},
+      "guidance": {
+        "chat": "Для обычного чата встроенные серверные инструменты не требуются.",
+        "agent": "Внешняя IDE передаёт tools через API. Серверные инструменты включайте отдельно только при необходимости."
+      }
+    },
+    {
+      "name": "--tools-runtime",
+      "label": "Среда выполнения инструментов",
+      "type": 0,
+      "default": "none, use host environment",
+      "priority": 260,
+      "group": "Server-specific params",
+      "aliases": [
+        "--tools-runtime"
+      ],
+      "negative": "",
+      "description": "Хост, контейнер Docker/Podman или удалённый хост SSH для встроенных инструментов.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "experimental: run tools in a separate runtime environment (default: none, use host environment)\navailable options:\n  'docker: ', 'podman: ': spin up a new container and reuse it for all invocations, clean up on server exit\n  'docker-container: ', 'podman-container: ': use an existing container by ID, won't stop on server exit\n  'ssh: ': run tools on a remote POSIX host over SSH, key-based auth and a trusted host key are required\n\n(env: LLAMA_ARG_TOOLS_RUNTIME)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--mcp-servers-config",
+      "label": "Файл серверов MCP",
+      "type": 4,
+      "default": null,
+      "priority": 261,
+      "group": "Server-specific params",
+      "aliases": [
+        "--mcp-servers-config"
+      ],
+      "negative": "",
+      "description": "JSON-файл определений MCP-серверов в совместимом с Cursor формате.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "experimental: path to JSON file with MCP server definitions (Cursor-compatible format) - do not enable in untrusted environments (default: none)\nnote: for security reasons, this will limit --cors-origins to localhost by default\n(env: LLAMA_ARG_MCP_SERVERS_CONFIG)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--mcp-servers-json",
+      "label": "Серверы MCP в JSON",
+      "type": 0,
+      "default": null,
+      "priority": 262,
+      "group": "Server-specific params",
+      "aliases": [
+        "--mcp-servers-json"
+      ],
+      "negative": "",
+      "description": "JSON-объект определений доверенных MCP-серверов.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "experimental: inline JSON with MCP server definitions (Cursor-compatible format) - do not enable in untrusted environments (default: none)\nnote: for security reasons, this will limit --cors-origins to localhost by default\n(env: LLAMA_ARG_MCP_SERVERS_JSON)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--agent",
+      "label": "Встроенный агент сервера",
+      "type": 3,
+      "default": false,
+      "priority": 263,
+      "group": "Server-specific params",
+      "aliases": [
+        "-ag",
+        "--agent",
+        "-no-ag",
+        "--no-agent"
+      ],
+      "negative": "--no-agent",
+      "description": "Включить CORS-прокси и все встроенные инструменты. Для внешней IDE этот флаг обычно не требуется.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to enable CORS proxy and all built-in tools - do not enable in untrusted environments (default: disabled)\nnote: for security reasons, this will limit --cors-origins to localhost by default\n(env: LLAMA_ARG_AGENT)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--ui",
+      "label": "Веб-интерфейс",
+      "type": 3,
+      "default": true,
+      "priority": 264,
+      "group": "Server-specific params",
+      "aliases": [
+        "--ui",
+        "--webui",
+        "--no-ui",
+        "--no-webui"
+      ],
+      "negative": "--no-ui",
+      "description": "Включить встроенный веб-интерфейс llama.cpp.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to enable the Web UI (default: enabled)\n(env: LLAMA_ARG_UI)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--connect",
+      "label": "Внешний туннель",
+      "type": 3,
+      "default": false,
+      "priority": 265,
+      "group": "Server-specific params",
+      "aliases": [
+        "--connect"
+      ],
+      "negative": "",
+      "description": "Экспериментальный туннель через llama-connect.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "(experimental) open a peer-to-peer tunnel for server using llama-connect (default: disabled)\n(env: LLAMA_ARG_CONNECT)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--connect-code",
+      "label": "Код туннеля",
+      "type": 0,
+      "default": "generate a new one for each run",
+      "priority": 266,
+      "group": "Server-specific params",
+      "aliases": [
+        "--connect-code"
+      ],
+      "negative": "",
+      "description": "Задать 40-символьный код подключения вместо автоматически созданного.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "manually specify a 40-character code for --connect (default: generate a new one for each run)\n(env: LLAMA_ARG_CONNECT_CODE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--embedding",
+      "label": "Режим эмбеддингов",
+      "type": 3,
+      "default": false,
+      "priority": 267,
+      "group": "Server-specific params",
+      "aliases": [
+        "--embedding",
+        "--embeddings"
+      ],
+      "negative": "",
+      "description": "Разрешить только вычисление эмбеддингов специализированной моделью.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "restrict to only support embedding use case; use only with dedicated embedding models (default: disabled)\n(env: LLAMA_ARG_EMBEDDINGS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--rerank",
+      "label": "Режим переранжирования",
+      "type": 3,
+      "default": false,
+      "priority": 268,
+      "group": "Server-specific params",
+      "aliases": [
+        "--rerank",
+        "--reranking"
+      ],
+      "negative": "",
+      "description": "Включить API переранжирования результатов поиска.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "enable reranking endpoint on server (default: disabled)\n(env: LLAMA_ARG_RERANKING)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--api-key",
+      "label": "Ключи доступа к API",
+      "type": 0,
+      "default": null,
+      "priority": 269,
+      "group": "Server-specific params",
+      "aliases": [
+        "--api-key"
+      ],
+      "negative": "",
+      "description": "Ключи аутентификации через запятую; клиент передаёт один из них.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "API key to use for authentication, multiple keys can be provided as a comma-separated list (default: none)\n(env: LLAMA_API_KEY)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--api-key-file",
+      "label": "Файл ключей API",
+      "type": 4,
+      "default": null,
+      "priority": 270,
+      "group": "Server-specific params",
+      "aliases": [
+        "--api-key-file"
+      ],
+      "negative": "",
+      "description": "Ключи по одному на строку; строки с решёткой — комментарии.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "path to file containing API keys, one per line; lines starting with a hash are treated as comments (default: none)\n(env: LLAMA_ARG_API_KEY_FILE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--ssl-key-file",
+      "label": "Приватный ключ TLS",
+      "type": 4,
+      "default": null,
+      "priority": 271,
+      "group": "Server-specific params",
+      "aliases": [
+        "--ssl-key-file"
+      ],
+      "negative": "",
+      "description": "Путь к приватному ключу в формате PEM.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "path to file a PEM-encoded SSL private key\n(env: LLAMA_ARG_SSL_KEY_FILE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--ssl-cert-file",
+      "label": "Сертификат TLS",
+      "type": 4,
+      "default": null,
+      "priority": 272,
+      "group": "Server-specific params",
+      "aliases": [
+        "--ssl-cert-file"
+      ],
+      "negative": "",
+      "description": "Путь к сертификату сервера в формате PEM.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "path to file a PEM-encoded SSL certificate\n(env: LLAMA_ARG_SSL_CERT_FILE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--chat-template-kwargs",
+      "label": "Аргументы шаблона чата",
+      "type": 0,
+      "default": null,
+      "priority": 273,
+      "group": "Server-specific params",
+      "aliases": [
+        "--chat-template-kwargs"
+      ],
+      "negative": "",
+      "description": "JSON-объект параметров шаблона; поддерживаемые ключи зависят от модели.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "sets additional params for the json template parser, must be a valid json object string, e.g. '{\"key1\":\"value1\",\"key2\":\"value2\"}'\n(env: LLAMA_ARG_CHAT_TEMPLATE_KWARGS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--timeout",
+      "label": "Тайм-аут HTTP",
+      "type": 1,
+      "default": 3600,
+      "priority": 274,
+      "group": "Server-specific params",
+      "aliases": [
+        "-to",
+        "--timeout"
+      ],
+      "negative": "",
+      "description": "Тайм-аут чтения и записи запросов в секундах.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "server read/write timeout in seconds (default: 3600)\n(env: LLAMA_ARG_TIMEOUT)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--sse-ping-interval",
+      "label": "Проверка соединения SSE",
+      "type": 1,
+      "default": 30,
+      "priority": 275,
+      "group": "Server-specific params",
+      "aliases": [
+        "--sse-ping-interval"
+      ],
+      "negative": "",
+      "description": "Интервал служебных SSE-сообщений в секундах; -1 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "server SSE ping interval in seconds (-1 = disabled, default: 30)\n(env: LLAMA_ARG_SSE_PING_INTERVAL)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--threads-http",
+      "label": "Потоки HTTP-сервера",
+      "type": 1,
+      "default": -1,
+      "priority": 276,
+      "group": "Server-specific params",
+      "aliases": [
+        "--threads-http"
+      ],
+      "negative": "",
+      "description": "Число потоков обработки HTTP-запросов; -1 автовыбор.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "number of threads used to process HTTP requests (default: -1)\n(env: LLAMA_ARG_THREADS_HTTP)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--cache-prompt",
+      "label": "Кэширование запросов",
+      "type": 3,
+      "default": true,
+      "priority": 277,
+      "group": "Server-specific params",
+      "aliases": [
+        "--cache-prompt",
+        "--no-cache-prompt"
+      ],
+      "negative": "--no-cache-prompt",
+      "description": "Повторно использовать обработанный префикс. Полезно для длинных диалогов и агентских циклов.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to enable prompt caching (default: enabled)\n(env: LLAMA_ARG_CACHE_PROMPT)",
+      "choiceLabels": {},
+      "guidance": {
+        "chat": "Повторное использование префикса ускоряет длинные диалоги.",
+        "agent": "Полезно при повторяющихся системных инструкциях, файлах и циклах инструментов."
+      }
+    },
+    {
+      "name": "--cache-reuse",
+      "label": "Минимальный фрагмент кэша",
+      "type": 1,
+      "default": 0,
+      "priority": 278,
+      "group": "Server-specific params",
+      "aliases": [
+        "--cache-reuse"
+      ],
+      "negative": "",
+      "description": "Минимум токенов для повторного использования сдвига KV-кэша; требуется кэширование запросов.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "min chunk size to attempt reusing from the cache via KV shifting, requires prompt caching to be enabled (default: 0)\n(card)\n(env: LLAMA_ARG_CACHE_REUSE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--metrics",
+      "label": "Метрики сервера",
+      "type": 3,
+      "default": false,
+      "priority": 279,
+      "group": "Server-specific params",
+      "aliases": [
+        "--metrics"
+      ],
+      "negative": "",
+      "description": "Включить endpoint метрик Prometheus.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "enable prometheus compatible metrics endpoint (default: disabled)\n(env: LLAMA_ARG_ENDPOINT_METRICS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--props",
+      "label": "Изменение свойств через API",
+      "type": 3,
+      "default": false,
+      "priority": 280,
+      "group": "Server-specific params",
+      "aliases": [
+        "--props"
+      ],
+      "negative": "",
+      "description": "Разрешить изменение глобальных свойств через POST /props.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "enable changing global properties via POST /props (default: disabled)\n(env: LLAMA_ARG_ENDPOINT_PROPS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--slots",
+      "label": "Мониторинг слотов",
+      "type": 3,
+      "default": true,
+      "priority": 281,
+      "group": "Server-specific params",
+      "aliases": [
+        "--slots",
+        "--no-slots"
+      ],
+      "negative": "--no-slots",
+      "description": "Публиковать сведения о параллельных слотах.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "expose slots monitoring endpoint (default: enabled)\n(env: LLAMA_ARG_ENDPOINT_SLOTS)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--slot-save-path",
+      "label": "Папка сохранения KV-кэша",
+      "type": 4,
+      "default": null,
+      "priority": 282,
+      "group": "Server-specific params",
+      "aliases": [
+        "--slot-save-path"
+      ],
+      "negative": "",
+      "description": "Папка файлов сохранённого состояния слотов.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "path to save slot kv cache (default: disabled)\n(env: LLAMA_ARG_SLOT_SAVE_PATH)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--media-path",
+      "label": "Папка локального медиа",
+      "type": 4,
+      "default": null,
+      "priority": 283,
+      "group": "Server-specific params",
+      "aliases": [
+        "--media-path"
+      ],
+      "negative": "",
+      "description": "Папка медиафайлов для относительных file:// URL.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "directory for loading local media files; files can be accessed via file:// URLs using relative paths (default: disabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--models-dir",
+      "label": "Папка моделей маршрутизатора",
+      "type": 4,
+      "default": null,
+      "priority": 284,
+      "group": "Server-specific params",
+      "aliases": [
+        "--models-dir"
+      ],
+      "negative": "",
+      "description": "Каталог моделей для режима router с загрузкой по запросу.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "directory containing models for the router server (default: disabled)\n(env: LLAMA_ARG_MODELS_DIR)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--models-preset",
+      "label": "Пресеты моделей маршрутизатора",
+      "type": 4,
+      "default": null,
+      "priority": 285,
+      "group": "Server-specific params",
+      "aliases": [
+        "--models-preset"
+      ],
+      "negative": "",
+      "description": "INI-файл параметров отдельных моделей router.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "path to INI file containing model presets for the router server (default: disabled)\n(env: LLAMA_ARG_MODELS_PRESET)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--models-max",
+      "label": "Число загруженных моделей",
+      "type": 1,
+      "default": 4,
+      "priority": 286,
+      "group": "Server-specific params",
+      "aliases": [
+        "--models-max"
+      ],
+      "negative": "",
+      "description": "Максимум моделей в памяти маршрутизатора; 0 снимает ограничение.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "for router server, maximum number of models to load simultaneously (default: 4, 0 = unlimited)\n(env: LLAMA_ARG_MODELS_MAX)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--models-memory-margin",
+      "label": "Резерв памяти маршрутизатора",
+      "type": 1,
+      "default": 0,
+      "priority": 287,
+      "group": "Server-specific params",
+      "aliases": [
+        "--models-memory-margin"
+      ],
+      "negative": "",
+      "description": "Запас памяти каждой GPU в МиБ; router может выгружать неактивные модели.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "for router server, MiB of device memory to keep free per device, unload LRU models until a new one fits (default: 0, 0 = disabled)\n(env: LLAMA_ARG_MODELS_MEMORY_MARGIN)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--models-autoload",
+      "label": "Автозагрузка моделей",
+      "type": 3,
+      "default": true,
+      "priority": 288,
+      "group": "Server-specific params",
+      "aliases": [
+        "--models-autoload",
+        "--no-models-autoload"
+      ],
+      "negative": "--no-models-autoload",
+      "description": "Загружать модели при поступлении запросов к маршрутизатору.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "for router server, whether to automatically load models (default: enabled)\n(env: LLAMA_ARG_MODELS_AUTOLOAD)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--jinja",
+      "label": "Шаблон чата Jinja",
+      "type": 3,
+      "default": true,
+      "priority": 289,
+      "group": "Server-specific params",
+      "aliases": [
+        "--jinja",
+        "--no-jinja"
+      ],
+      "negative": "--no-jinja",
+      "description": "Использовать Jinja для родного шаблона чата и вызовов инструментов модели.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to use jinja template engine for chat (default: enabled)\n(env: LLAMA_ARG_JINJA)",
+      "choiceLabels": {},
+      "guidance": {
+        "chat": "Используйте родной шаблон Instruct-модели.",
+        "agent": "Нужен совместимый шаблон вызовов инструментов; одного включения Jinja недостаточно для обучения модели tools."
+      }
+    },
+    {
+      "name": "--reasoning-format",
+      "label": "Формат рассуждений",
+      "type": 5,
+      "default": "auto",
+      "priority": 290,
+      "group": "Server-specific params",
+      "aliases": [
+        "--reasoning-format"
+      ],
+      "negative": "",
+      "description": "Отделение рассуждений от ответа: автоматически, без разбора или форматы DeepSeek.",
+      "choices": [
+        "auto",
+        "none",
+        "deepseek",
+        "deepseek-legacy"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "controls whether thought tags are allowed and/or extracted from the response, and in which format they're returned; one of:\n- none: leaves thoughts unparsed in `message.content`\n- deepseek: puts thoughts in `message.reasoning_content`\n- deepseek-legacy: keeps ` ` tags in `message.content` while also populating `message.reasoning_content`\n(default: auto)\n(env: LLAMA_ARG_THINK)",
+      "choiceLabels": {
+        "auto": "Автоматически",
+        "none": "Без / отключено",
+        "deepseek": "deepseek",
+        "deepseek-legacy": "deepseek-legacy"
+      }
+    },
+    {
+      "name": "--reasoning",
+      "label": "Режим рассуждений",
+      "type": 5,
+      "default": null,
+      "priority": 291,
+      "group": "Server-specific params",
+      "aliases": [
+        "-rea",
+        "--reasoning"
+      ],
+      "negative": "",
+      "description": "Включить, выключить или определить по шаблону. Модель должна поддерживать переключение.",
+      "choices": [
+        "on",
+        "off",
+        "auto"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Use reasoning/thinking in the chat ('on', 'off', or 'auto', default: 'auto' (detect from template))\n(env: LLAMA_ARG_REASONING)",
+      "choiceLabels": {
+        "on": "Включено",
+        "off": "Выключено",
+        "auto": "Автоматически"
+      }
+    },
+    {
+      "name": "--reasoning-effort",
+      "label": "Усилие рассуждений",
+      "type": 0,
+      "default": "default",
+      "priority": 292,
+      "group": "Server-specific params",
+      "aliases": [
+        "--reasoning-effort"
+      ],
+      "negative": "",
+      "description": "Уровень рассуждений для шаблона. Допустимые уровни и эффект зависят от модели.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "reasoning effort level given to the chat template: 'default' to keep the template default,\nor a level such as 'minimal', 'low', 'medium', 'high', 'xhigh' or 'max' (default: default)\n(env: LLAMA_ARG_REASONING_EFFORT)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--reasoning-budget",
+      "label": "Бюджет рассуждений",
+      "type": 1,
+      "default": -1,
+      "priority": 293,
+      "group": "Server-specific params",
+      "aliases": [
+        "--reasoning-budget"
+      ],
+      "negative": "",
+      "description": "Лимит токенов размышлений: -1 без ограничения, 0 немедленно завершает их.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "token budget for thinking: -1 for unrestricted, 0 for immediate end, N>0 for token budget (default: -1)\n(env: LLAMA_ARG_THINK_BUDGET)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--reasoning-budget-message",
+      "label": "Сообщение исчерпания бюджета",
+      "type": 0,
+      "default": null,
+      "priority": 294,
+      "group": "Server-specific params",
+      "aliases": [
+        "--reasoning-budget-message"
+      ],
+      "negative": "",
+      "description": "Текст перед тегом завершения рассуждений при исчерпании бюджета.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "message injected before the end-of-thinking tag when reasoning budget is exhausted (default: none)\n(env: LLAMA_ARG_THINK_BUDGET_MESSAGE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--reasoning-preserve",
+      "label": "Сохранение рассуждений в истории",
+      "type": 3,
+      "default": null,
+      "priority": 295,
+      "group": "Server-specific params",
+      "aliases": [
+        "--reasoning-preserve",
+        "--no-reasoning-preserve"
+      ],
+      "negative": "--no-reasoning-preserve",
+      "description": "Сохранять прошлые рассуждения, если шаблон поддерживает этот режим.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "preserve reasoning trace in the full history, not just the last assistant message (default: template default)\ncompatible with certain templates having 'supports_preserve_reasoning' capability\nexample: https://docs.z.ai/guides/capabilities/thinking-mode#preserved-thinking\n(env: LLAMA_ARG_REASONING_PRESERVE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--chat-template",
+      "label": "Шаблон чата",
+      "type": 0,
+      "default": null,
+      "priority": 296,
+      "group": "Server-specific params",
+      "aliases": [
+        "--chat-template"
+      ],
+      "negative": "",
+      "description": "Переопределить родной шаблон. Обычно лучше использовать метаданные GGUF; шаблон должен соответствовать модели.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set custom jinja chat template (default: template taken from model's metadata)\nif suffix/prefix are specified, template will be disabled\nonly commonly used templates are accepted (unless --jinja is set before this flag):\nlist of built-in templates:\nbailing, bailing-think, bailing2, chatglm3, chatglm4, chatml, command-r, deepseek, deepseek-ocr, deepseek2, deepseek3, exaone-moe, exaone3, exaone4, falcon3, gemma, gigachat, glmedge, gpt-oss, granite, granite-4.0, granite-4.1, grok-2, hunyuan-dense, hunyuan-moe, hunyuan-vl, kimi-k2, llama2, llama2-sys, llama2-sys-bos, llama2-sys-strip, llama3, llama4, megrez, minicpm, mistral-v1, mistral-v3, mistral-v3-tekken, mistral-v7, mistral-v7-tekken, monarch, openchat, orion, pangu-embedded, phi3, phi4, rwkv-world, seed_oss, smolvlm, solar-open, vicuna, vicuna-orca, yandex, zephyr\n(env: LLAMA_ARG_CHAT_TEMPLATE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--chat-template-file",
+      "label": "Файл шаблона чата",
+      "type": 4,
+      "default": null,
+      "priority": 297,
+      "group": "Server-specific params",
+      "aliases": [
+        "--chat-template-file"
+      ],
+      "negative": "",
+      "description": "Совместимый с моделью файл Jinja, включая формат инструментов.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set custom jinja chat template file (default: template taken from model's metadata)\nif suffix/prefix are specified, template will be disabled\nonly commonly used templates are accepted (unless --jinja is set before this flag):\nlist of built-in templates:\nbailing, bailing-think, bailing2, chatglm3, chatglm4, chatml, command-r, deepseek, deepseek-ocr, deepseek2, deepseek3, exaone-moe, exaone3, exaone4, falcon3, gemma, gigachat, glmedge, gpt-oss, granite, granite-4.0, granite-4.1, grok-2, hunyuan-dense, hunyuan-moe, hunyuan-vl, kimi-k2, llama2, llama2-sys, llama2-sys-bos, llama2-sys-strip, llama3, llama4, megrez, minicpm, mistral-v1, mistral-v3, mistral-v3-tekken, mistral-v7, mistral-v7-tekken, monarch, openchat, orion, pangu-embedded, phi3, phi4, rwkv-world, seed_oss, smolvlm, solar-open, vicuna, vicuna-orca, yandex, zephyr\n(env: LLAMA_ARG_CHAT_TEMPLATE_FILE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--skip-chat-parsing",
+      "label": "Вывод без разбора чата",
+      "type": 3,
+      "default": false,
+      "priority": 298,
+      "group": "Server-specific params",
+      "aliases": [
+        "--skip-chat-parsing",
+        "--no-skip-chat-parsing"
+      ],
+      "negative": "--no-skip-chat-parsing",
+      "description": "Не отделять рассуждения и вызовы инструментов; всё попадает в обычный текст.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "force a pure content parser, even if a Jinja template is specified; model will output everything in the content section, including any reasoning and/or tool calls (default: disabled)\n(env: LLAMA_ARG_SKIP_CHAT_PARSING)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--prefill-assistant",
+      "label": "Продолжение ответа ассистента",
+      "type": 3,
+      "default": true,
+      "priority": 299,
+      "group": "Server-specific params",
+      "aliases": [
+        "--prefill-assistant",
+        "--no-prefill-assistant"
+      ],
+      "negative": "--no-prefill-assistant",
+      "description": "Считать последнее сообщение ассистента началом ответа и продолжать его.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "whether to prefill the assistant's response if the last message is an assistant message (default: prefill enabled)\nwhen this flag is set, if the last message is an assistant message then it will be treated as a full message and not prefilled\n\n(env: LLAMA_ARG_PREFILL_ASSISTANT)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--slot-prompt-similarity",
+      "label": "Порог похожести запросов",
+      "type": 2,
+      "default": 0.1,
+      "priority": 300,
+      "group": "Server-specific params",
+      "aliases": [
+        "-sps",
+        "--slot-prompt-similarity"
+      ],
+      "negative": "",
+      "description": "Минимальная похожесть префикса для выбора слота; 0 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "how much the prompt of a request must match the prompt of a slot in order to use that slot (default: 0.10, 0.0 = disabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--lora-init-without-apply",
+      "label": "Загрузить LoRA без применения",
+      "type": 3,
+      "default": false,
+      "priority": 301,
+      "group": "Server-specific params",
+      "aliases": [
+        "--lora-init-without-apply"
+      ],
+      "negative": "",
+      "description": "Загрузить адаптеры и включить позднее через API.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "load LoRA adapters without applying them (apply later via POST /lora-adapters) (default: disabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--sleep-idle-seconds",
+      "label": "Сон при простое",
+      "type": 1,
+      "default": -1,
+      "priority": 302,
+      "group": "Server-specific params",
+      "aliases": [
+        "--sleep-idle-seconds"
+      ],
+      "negative": "",
+      "description": "Секунды без запросов до перехода в сон; -1 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "number of seconds of idleness after which the server will sleep (default: -1; -1 = disabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--log-prompts-dir",
+      "label": "Папка отладки запросов",
+      "type": 4,
+      "default": null,
+      "priority": 303,
+      "group": "Server-specific params",
+      "aliases": [
+        "--log-prompts-dir"
+      ],
+      "negative": "",
+      "description": "Записывать запросы в папку для диагностики.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Log prompts to directory (auto-created if not present; only used for debugging, default: disabled)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-hf",
+      "label": "Репозиторий черновой модели",
+      "type": 0,
+      "default": null,
+      "priority": 304,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-hf",
+        "-hfd",
+        "-hfrd",
+        "--hf-repo-draft"
+      ],
+      "negative": "",
+      "description": "Репозиторий Hugging Face дополнительной модели спекулятивной генерации.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Same as --hf-repo, but for the draft model (default: unused)\n(env: LLAMA_ARG_SPEC_DRAFT_HF_REPO)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-threads",
+      "label": "Черновая модель: потоки процессора",
+      "type": 1,
+      "default": null,
+      "priority": 305,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-threads",
+        "-td",
+        "--threads-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. Число потоков CPU при генерации. -1 включает автоматический выбор.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "number of threads to use during generation (default: same as --threads)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-threads-batch",
+      "label": "Черновая модель: потоки обработки запроса",
+      "type": 1,
+      "default": null,
+      "priority": 306,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-threads-batch",
+        "-tbd",
+        "--threads-batch-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. Потоки CPU для обработки входного текста; по умолчанию как при генерации.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "number of threads to use during batch and prompt processing (default: same as --threads-draft)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-cpu-mask",
+      "label": "Черновая модель: маска ядер cpu",
+      "type": 0,
+      "default": null,
+      "priority": 307,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-cpu-mask",
+        "-Cd",
+        "--cpu-mask-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. Шестнадцатеричная маска привязки потоков к ядрам процессора.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Draft model CPU affinity mask. Complements cpu-range-draft (default: same as --cpu-mask)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-cpu-range",
+      "label": "Черновая модель: диапазон ядер cpu",
+      "type": 0,
+      "default": null,
+      "priority": 308,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-cpu-range",
+        "-Crd",
+        "--cpu-range-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. Разрешённые ядра в формате начало-конец; дополняет маску CPU.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Ranges of CPUs for affinity. Complements --cpu-mask-draft",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-cpu-strict",
+      "label": "Черновая модель: строгая привязка к ядрам",
+      "type": 1,
+      "default": null,
+      "priority": 309,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-cpu-strict",
+        "--cpu-strict-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. 1 включает строгую привязку потоков к выбранным ядрам, 0 отключает.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Use strict CPU placement for draft model (default: same as --cpu-strict)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-prio",
+      "label": "Черновая модель: приоритет вычислений",
+      "type": 2,
+      "default": 0.0,
+      "priority": 310,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-prio",
+        "--prio-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. Приоритет: -1 низкий, 0 обычный, 1 повышенный, 2 высокий, 3 реального времени.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set draft process/thread priority : 0-normal, 1-medium, 2-high, 3-realtime (default: 0)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-poll",
+      "label": "Черновая модель: активное ожидание cpu",
+      "type": 2,
+      "default": null,
+      "priority": 311,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-poll",
+        "--poll-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. Интенсивность опроса задач от 0 до 100. Ноль отключает активное ожидание.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Use polling to wait for draft model work (default: same as --poll)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-cpu-mask-batch",
+      "label": "Черновая модель: маска ядер для пакетов",
+      "type": 0,
+      "default": null,
+      "priority": 312,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-cpu-mask-batch",
+        "-Cbd",
+        "--cpu-mask-batch-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. Маска привязки потоков при обработке входного текста.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Draft model CPU affinity mask. Complements cpu-range-draft (default: same as --cpu-mask)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-cpu-strict-batch",
+      "label": "Черновая модель: строгая привязка пакетов",
+      "type": 1,
+      "default": null,
+      "priority": 313,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-cpu-strict-batch",
+        "--cpu-strict-batch-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. Строгая привязка к ядрам при обработке запроса: 0 или 1.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Use strict CPU placement for draft model (default: --cpu-strict-draft)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-prio-batch",
+      "label": "Черновая модель: приоритет обработки пакетов",
+      "type": 2,
+      "default": 0.0,
+      "priority": 314,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-prio-batch",
+        "--prio-batch-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. Приоритет: 0 обычный, 1 повышенный, 2 высокий, 3 реального времени.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "set draft process/thread priority : 0-normal, 1-medium, 2-high, 3-realtime (default: 0)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-poll-batch",
+      "label": "Черновая модель: опрос задач обработки пакетов",
+      "type": 2,
+      "default": null,
+      "priority": 315,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-poll-batch",
+        "--poll-batch-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. Активное ожидание при обработке входного текста; наследуется от основного режима.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "Use polling to wait for draft model work (default: --poll-draft)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-override-tensor",
+      "label": "Черновая модель: размещение отдельных тензоров",
+      "type": 0,
+      "default": null,
+      "priority": 316,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-override-tensor",
+        "-otd",
+        "--override-tensor-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. Буферы тензоров по шаблону: шаблон=тип_буфера. Настраивайте вручную или по результатам fit.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "override tensor buffer type for draft model",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-cpu-moe",
+      "label": "Черновая модель: эксперты moe на cpu",
+      "type": 3,
+      "default": null,
+      "priority": 317,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-cpu-moe",
+        "-cmoed",
+        "--cpu-moe-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. Оставить веса всех экспертов MoE в оперативной памяти процессора.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "keep all Mixture of Experts (MoE) weights in the CPU for the draft model\n(env: LLAMA_ARG_SPEC_DRAFT_CPU_MOE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-n-cpu-moe",
+      "label": "Черновая модель: слои экспертов на cpu",
+      "type": 1,
+      "default": null,
+      "priority": 318,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-n-cpu-moe",
+        "--spec-draft-ncmoe",
+        "-ncmoed",
+        "--n-cpu-moe-draft"
+      ],
+      "negative": "",
+      "description": "Для черновой модели. Число первых слоёв, эксперты MoE которых остаются на CPU.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "keep the Mixture of Experts (MoE) weights of the first N layers in the CPU for the draft model\n(env: LLAMA_ARG_SPEC_DRAFT_N_CPU_MOE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-n-max",
+      "label": "Максимум черновых токенов",
+      "type": 1,
+      "default": 3,
+      "priority": 319,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-n-max"
+      ],
+      "negative": "",
+      "description": "Максимум токенов черновой модели за шаг.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "number of tokens to draft for speculative decoding (default: 3)\n(env: LLAMA_ARG_SPEC_DRAFT_N_MAX)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-n-min",
+      "label": "Минимум черновых токенов",
+      "type": 1,
+      "default": 0,
+      "priority": 320,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-n-min"
+      ],
+      "negative": "",
+      "description": "Минимум токенов черновой модели за шаг.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "minimum number of draft tokens to use for speculative decoding (default: 0)\n(env: LLAMA_ARG_SPEC_DRAFT_N_MIN)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-n-ubatch",
+      "label": "Микропакет черновой модели",
+      "type": 1,
+      "default": 0,
+      "priority": 321,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-n-ubatch"
+      ],
+      "negative": "",
+      "description": "Размер физического пакета черновой модели; уменьшение экономит VRAM.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "physical maximum batch size of the draft context, use a smaller value to spare VRAM (default: 0 - same as --n-ubatch)\n(env: LLAMA_ARG_SPEC_DRAFT_N_UBATCH)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-synth-len",
+      "label": "Тестовая длина принятия",
+      "type": 2,
+      "default": null,
+      "priority": 322,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-synth-len"
+      ],
+      "negative": "",
+      "description": "Искусственная средняя длина принятого продолжения для бенчмарков.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "target mean synthetic acceptance length, including the target token (benchmarking only)\n(env: LLAMA_ARG_SPEC_SYNTH_LEN)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-synth-rates",
+      "label": "Тестовые вероятности принятия",
+      "type": 0,
+      "default": null,
+      "priority": 323,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-synth-rates"
+      ],
+      "negative": "",
+      "description": "Искусственные вероятности принятия позиций через запятую для бенчмарков.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "comma-separated unconditional per-position synthetic acceptance probabilities (benchmarking only)\n(env: LLAMA_ARG_SPEC_SYNTH_RATES)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-p-split",
+      "label": "Вероятность ветвления черновика",
+      "type": 2,
+      "default": 0.1,
+      "priority": 324,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-p-split",
+        "--draft-p-split"
+      ],
+      "negative": "",
+      "description": "Порог разделения при спекулятивной генерации.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "speculative decoding split probability (default: 0.10)\n(env: LLAMA_ARG_SPEC_DRAFT_P_SPLIT)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-p-min",
+      "label": "Минимальная вероятность черновика",
+      "type": 2,
+      "default": 0.0,
+      "priority": 325,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-p-min",
+        "--draft-p-min"
+      ],
+      "negative": "",
+      "description": "Минимальный порог вероятности жадной спекулятивной генерации.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "minimum speculative decoding probability (greedy) (default: 0.00)\n(env: LLAMA_ARG_SPEC_DRAFT_P_MIN)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-backend-sampling",
+      "label": "Выбор черновых токенов на GPU",
+      "type": 3,
+      "default": true,
+      "priority": 326,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-backend-sampling",
+        "--no-spec-draft-backend-sampling"
+      ],
+      "negative": "--no-spec-draft-backend-sampling",
+      "description": "Перенести сэмплирование черновой модели на backend.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "offload draft sampling to the backend (default: enabled)\n(env: LLAMA_ARG_SPEC_DRAFT_BACKEND_SAMPLING)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-sampling",
+      "label": "Выбор токенов черновика",
+      "type": 5,
+      "default": "greedy",
+      "priority": 327,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-sampling"
+      ],
+      "negative": "",
+      "description": "Жадный максимум или вероятностный выбор с проверкой основной моделью.",
+      "choices": [
+        "greedy",
+        "probabilistic"
+      ],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "how the draft is sampled: greedy takes its argmax, probabilistic samples it and has the target verify by rejection sampling (default: greedy)\n(env: LLAMA_ARG_SPEC_DRAFT_SAMPLING)",
+      "choiceLabels": {
+        "greedy": "Жадный выбор",
+        "probabilistic": "Вероятностный выбор"
+      }
+    },
+    {
+      "name": "--spec-draft-device",
+      "label": "Устройства черновой модели",
+      "type": 0,
+      "default": null,
+      "priority": 328,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-device",
+        "-devd",
+        "--device-draft"
+      ],
+      "negative": "",
+      "description": "Список ускорителей; none оставляет черновую модель на CPU.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "comma-separated list of devices to use for offloading the draft model (none = don't offload, default: follows --device)\nuse --list-devices to see a list of available devices",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-ngl",
+      "label": "Слои черновой модели на GPU",
+      "type": 0,
+      "default": "auto",
+      "priority": 329,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-ngl",
+        "-ngld",
+        "--gpu-layers-draft",
+        "--n-gpu-layers-draft"
+      ],
+      "negative": "",
+      "description": "Число GPU-слоёв черновой модели, auto или all.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "max. number of draft model layers to store in VRAM, either an exact number, 'auto', or 'all' (default: auto)\n(env: LLAMA_ARG_N_GPU_LAYERS_DRAFT)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-draft-model",
+      "label": "Черновая модель",
+      "type": 4,
+      "default": null,
+      "priority": 19,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-draft-model",
+        "-md",
+        "--model-draft"
+      ],
+      "negative": "",
+      "description": "Совместимая дополнительная GGUF-модель для спекулятивного ускорения.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "draft model for speculative decoding (default: unused)\n(env: LLAMA_ARG_SPEC_DRAFT_MODEL)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-type",
+      "label": "Способ спекулятивной генерации",
+      "type": 0,
+      "default": null,
+      "priority": 331,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-type"
+      ],
+      "negative": "",
+      "description": "Список алгоритмов через запятую. Совместимость зависит от модели и метода.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "comma-separated list of types of speculative decoding to use (default: none)\n\n(env: LLAMA_ARG_SPEC_TYPE)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-mod-n-min",
+      "label": "Минимум токенов (mod)",
+      "type": 1,
+      "default": 48,
+      "priority": 332,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-mod-n-min"
+      ],
+      "negative": "",
+      "description": "Минимум токенов n-граммной генерации. Алгоритм mod.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "minimum number of ngram tokens to use for ngram-based speculative decoding (default: 48)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-mod-n-max",
+      "label": "Максимум токенов (mod)",
+      "type": 1,
+      "default": 64,
+      "priority": 333,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-mod-n-max"
+      ],
+      "negative": "",
+      "description": "Максимум токенов n-граммной генерации. Алгоритм mod.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "maximum number of ngram tokens to use for ngram-based speculative decoding (default: 64)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-mod-n-match",
+      "label": "Длина поиска (mod)",
+      "type": 1,
+      "default": 24,
+      "priority": 334,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-mod-n-match"
+      ],
+      "negative": "",
+      "description": "Длина совпадающей последовательности. Алгоритм mod.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "ngram-mod lookup length (default: 24)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-simple-size-n",
+      "label": "Длина n-граммы поиска (simple)",
+      "type": 1,
+      "default": 12,
+      "priority": 335,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-simple-size-n"
+      ],
+      "negative": "",
+      "description": "Число токенов в искомой n-грамме. Алгоритм simple.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "ngram size N for ngram-simple speculative decoding, length of lookup n-gram (default: 12)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-simple-size-m",
+      "label": "Длина черновой n-граммы (simple)",
+      "type": 1,
+      "default": 48,
+      "priority": 336,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-simple-size-m"
+      ],
+      "negative": "",
+      "description": "Число токенов в предлагаемом продолжении. Алгоритм simple.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "ngram size M for ngram-simple speculative decoding, length of draft m-gram (default: 48)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-simple-min-hits",
+      "label": "Минимум совпадений (simple)",
+      "type": 1,
+      "default": 1,
+      "priority": 337,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-simple-min-hits"
+      ],
+      "negative": "",
+      "description": "Порог совпадений для применения продолжения. Алгоритм simple.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "minimum hits for ngram-simple speculative decoding (default: 1)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-map-k-size-n",
+      "label": "Длина n-граммы поиска (map-k)",
+      "type": 1,
+      "default": 12,
+      "priority": 338,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-map-k-size-n"
+      ],
+      "negative": "",
+      "description": "Число токенов в искомой n-грамме. Алгоритм map-k.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "ngram size N for ngram-map-k speculative decoding, length of lookup n-gram (default: 12)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-map-k-size-m",
+      "label": "Длина черновой n-граммы (map-k)",
+      "type": 1,
+      "default": 48,
+      "priority": 339,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-map-k-size-m"
+      ],
+      "negative": "",
+      "description": "Число токенов в предлагаемом продолжении. Алгоритм map-k.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "ngram size M for ngram-map-k speculative decoding, length of draft m-gram (default: 48)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-map-k-min-hits",
+      "label": "Минимум совпадений (map-k)",
+      "type": 1,
+      "default": 1,
+      "priority": 340,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-map-k-min-hits"
+      ],
+      "negative": "",
+      "description": "Порог совпадений для применения продолжения. Алгоритм map-k.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "minimum hits for ngram-map-k speculative decoding (default: 1)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-map-k4v-size-n",
+      "label": "Длина n-граммы поиска (map-k4v)",
+      "type": 1,
+      "default": 12,
+      "priority": 341,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-map-k4v-size-n"
+      ],
+      "negative": "",
+      "description": "Число токенов в искомой n-грамме. Алгоритм map-k4v.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "ngram size N for ngram-map-k4v speculative decoding, length of lookup n-gram (default: 12)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-map-k4v-size-m",
+      "label": "Длина черновой n-граммы (map-k4v)",
+      "type": 1,
+      "default": 48,
+      "priority": 342,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-map-k4v-size-m"
+      ],
+      "negative": "",
+      "description": "Число токенов в предлагаемом продолжении. Алгоритм map-k4v.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "ngram size M for ngram-map-k4v speculative decoding, length of draft m-gram (default: 48)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-map-k4v-min-hits",
+      "label": "Минимум совпадений (map-k4v)",
+      "type": 1,
+      "default": 1,
+      "priority": 343,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-map-k4v-min-hits"
+      ],
+      "negative": "",
+      "description": "Порог совпадений для применения продолжения. Алгоритм map-k4v.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "minimum hits for ngram-map-k4v speculative decoding (default: 1)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--draft",
+      "label": "Удалённый лимит черновика",
+      "type": 1,
+      "default": null,
+      "priority": 344,
+      "group": "Server-specific params",
+      "aliases": [
+        "--draft",
+        "--draft-n",
+        "--draft-max"
+      ],
+      "negative": "",
+      "description": "Параметр удалён. Используйте --spec-draft-n-max или --spec-ngram-mod-n-max.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": true,
+      "action": false,
+      "originalDescription": "the argument has been removed. use --spec-draft-n-max or --spec-ngram-mod-n-max\n(env: LLAMA_ARG_DRAFT_MAX)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--draft-min",
+      "label": "Удалённый минимум черновика",
+      "type": 1,
+      "default": null,
+      "priority": 345,
+      "group": "Server-specific params",
+      "aliases": [
+        "--draft-min",
+        "--draft-n-min"
+      ],
+      "negative": "",
+      "description": "Параметр удалён. Используйте --spec-draft-n-min или --spec-ngram-mod-n-min.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": true,
+      "action": false,
+      "originalDescription": "the argument has been removed. use --spec-draft-n-min or --spec-ngram-mod-n-min\n(env: LLAMA_ARG_DRAFT_MIN)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-size-n",
+      "label": "Удалённый размер поиска n-грамм",
+      "type": 1,
+      "default": null,
+      "priority": 346,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-size-n"
+      ],
+      "negative": "",
+      "description": "Используйте размер n-граммы соответствующего алгоритма или --spec-ngram-mod-n-match.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": true,
+      "action": false,
+      "originalDescription": "the argument has been removed. use the respective --spec-ngram-*-size-n or --spec-ngram-mod-n-match",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-size-m",
+      "label": "Удалённый размер черновика n-грамм",
+      "type": 1,
+      "default": null,
+      "priority": 347,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-size-m"
+      ],
+      "negative": "",
+      "description": "Используйте размер черновой n-граммы соответствующего алгоритма.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": true,
+      "action": false,
+      "originalDescription": "the argument has been removed. use the respective --spec-ngram-*-size-m",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-ngram-min-hits",
+      "label": "Удалённый порог совпадений",
+      "type": 1,
+      "default": null,
+      "priority": 348,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-ngram-min-hits"
+      ],
+      "negative": "",
+      "description": "Используйте порог совпадений соответствующего алгоритма n-грамм.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": true,
+      "action": false,
+      "originalDescription": "the argument has been removed. use the respective --spec-ngram-*-min-hits",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--embd-gemma-default",
+      "label": "Готовая модель: embd-gemma",
+      "type": 3,
+      "default": null,
+      "priority": 349,
+      "group": "Server-specific params",
+      "aliases": [
+        "--embd-gemma-default"
+      ],
+      "negative": "",
+      "description": "Использовать преднастроенную модель embd-gemma. Может загружать веса из интернета.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use default EmbeddingGemma model (note: can download weights from the internet)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--fim-qwen-1.5b-default",
+      "label": "Готовая модель: fim-qwen-1.5b",
+      "type": 3,
+      "default": null,
+      "priority": 350,
+      "group": "Server-specific params",
+      "aliases": [
+        "--fim-qwen-1.5b-default"
+      ],
+      "negative": "",
+      "description": "Использовать преднастроенную модель fim-qwen-1.5b. Может загружать веса из интернета.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use default Qwen 2.5 Coder 1.5B (note: can download weights from the internet)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--fim-qwen-3b-default",
+      "label": "Готовая модель: fim-qwen-3b",
+      "type": 3,
+      "default": null,
+      "priority": 351,
+      "group": "Server-specific params",
+      "aliases": [
+        "--fim-qwen-3b-default"
+      ],
+      "negative": "",
+      "description": "Использовать преднастроенную модель fim-qwen-3b. Может загружать веса из интернета.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use default Qwen 2.5 Coder 3B (note: can download weights from the internet)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--fim-qwen-7b-default",
+      "label": "Готовая модель: fim-qwen-7b",
+      "type": 3,
+      "default": null,
+      "priority": 352,
+      "group": "Server-specific params",
+      "aliases": [
+        "--fim-qwen-7b-default"
+      ],
+      "negative": "",
+      "description": "Использовать преднастроенную модель fim-qwen-7b. Может загружать веса из интернета.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use default Qwen 2.5 Coder 7B (note: can download weights from the internet)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--fim-qwen-7b-spec",
+      "label": "Готовая модель: fim-qwen-7b",
+      "type": 3,
+      "default": null,
+      "priority": 353,
+      "group": "Server-specific params",
+      "aliases": [
+        "--fim-qwen-7b-spec"
+      ],
+      "negative": "",
+      "description": "Использовать преднастроенную модель fim-qwen-7b. Может загружать веса из интернета.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use Qwen 2.5 Coder 7B + 0.5B draft for speculative decoding (note: can download weights from the internet)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--fim-qwen-14b-spec",
+      "label": "Готовая модель: fim-qwen-14b",
+      "type": 3,
+      "default": null,
+      "priority": 354,
+      "group": "Server-specific params",
+      "aliases": [
+        "--fim-qwen-14b-spec"
+      ],
+      "negative": "",
+      "description": "Использовать преднастроенную модель fim-qwen-14b. Может загружать веса из интернета.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use Qwen 2.5 Coder 14B + 0.5B draft for speculative decoding (note: can download weights from the internet)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--fim-qwen-30b-default",
+      "label": "Готовая модель: fim-qwen-30b",
+      "type": 3,
+      "default": null,
+      "priority": 355,
+      "group": "Server-specific params",
+      "aliases": [
+        "--fim-qwen-30b-default"
+      ],
+      "negative": "",
+      "description": "Использовать преднастроенную модель fim-qwen-30b. Может загружать веса из интернета.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use default Qwen 3 Coder 30B A3B Instruct (note: can download weights from the internet)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--gpt-oss-20b-default",
+      "label": "Готовая модель: gpt-oss-20b",
+      "type": 3,
+      "default": null,
+      "priority": 356,
+      "group": "Server-specific params",
+      "aliases": [
+        "--gpt-oss-20b-default"
+      ],
+      "negative": "",
+      "description": "Использовать преднастроенную модель gpt-oss-20b. Может загружать веса из интернета.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use gpt-oss-20b (note: can download weights from the internet)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--gpt-oss-120b-default",
+      "label": "Готовая модель: gpt-oss-120b",
+      "type": 3,
+      "default": null,
+      "priority": 357,
+      "group": "Server-specific params",
+      "aliases": [
+        "--gpt-oss-120b-default"
+      ],
+      "negative": "",
+      "description": "Использовать преднастроенную модель gpt-oss-120b. Может загружать веса из интернета.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use gpt-oss-120b (note: can download weights from the internet)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--vision-gemma-4b-default",
+      "label": "Готовая модель: vision-gemma-4b",
+      "type": 3,
+      "default": null,
+      "priority": 358,
+      "group": "Server-specific params",
+      "aliases": [
+        "--vision-gemma-4b-default"
+      ],
+      "negative": "",
+      "description": "Использовать преднастроенную модель vision-gemma-4b. Может загружать веса из интернета.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use Gemma 3 4B QAT (note: can download weights from the internet)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--vision-gemma-12b-default",
+      "label": "Готовая модель: vision-gemma-12b",
+      "type": 3,
+      "default": null,
+      "priority": 359,
+      "group": "Server-specific params",
+      "aliases": [
+        "--vision-gemma-12b-default"
+      ],
+      "negative": "",
+      "description": "Использовать преднастроенную модель vision-gemma-12b. Может загружать веса из интернета.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "use Gemma 3 12B QAT (note: can download weights from the internet)",
+      "choiceLabels": {}
+    },
+    {
+      "name": "--spec-default",
+      "label": "Автовыбор спекулятивной генерации",
+      "type": 3,
+      "default": null,
+      "priority": 360,
+      "group": "Server-specific params",
+      "aliases": [
+        "--spec-default"
+      ],
+      "negative": "",
+      "description": "Включить стандартную конфигурацию спекулятивного ускорения.",
+      "choices": [],
+      "enabled": false,
+      "unavailable": false,
+      "action": false,
+      "originalDescription": "enable default speculative decoding config",
+      "choiceLabels": {}
+    }
+  ]
+}
