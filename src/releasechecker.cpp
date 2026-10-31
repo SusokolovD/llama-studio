@@ -1,4 +1,5 @@
 #include "releasechecker.h"
+#include "version.h"
 #include "config.h"
 #include <QDateTime>
 #include <QFileInfo>
@@ -44,7 +45,7 @@ void ReleaseChecker::check(const QString &directory) {
         QTimer::singleShot(3000, this, [this, currentRun] { if (run == currentRun && versionPending) version.kill(); });
     }
     QNetworkRequest request(apiUrl);
-    request.setRawHeader("User-Agent", "LlamaStudio/0.2"); request.setRawHeader("Accept", "application/vnd.github+json");
+    request.setRawHeader("User-Agent", QByteArray("LlamaStudio/")+STUDIO_VERSION); request.setRawHeader("Accept", "application/vnd.github+json");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     auto reply = network.get(request); reply->setReadBufferSize(2 * 1024 * 1024 + 1);
     auto data = QSharedPointer<QByteArray>::create();

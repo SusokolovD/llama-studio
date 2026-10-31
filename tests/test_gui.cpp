@@ -1,5 +1,7 @@
 #include "mainwindow.h"
 #include "advisordialog.h"
+#include "builderpage.h"
+#include "version.h"
 #include <QtTest>
 #include <QtWidgets>
 #include <QTcpServer>
@@ -11,6 +13,16 @@ class GuiTest : public QObject {
 private slots:
     void initTestCase() {
         QApplication::setStyle("Fusion");QFile style(":/style.qss");if(style.open(QIODevice::ReadOnly))qApp->setStyleSheet(QString::fromUtf8(style.readAll()));
+    }
+    void builderSettingsAndVersion() {
+        MainWindow window(nullptr,false);window.show();
+        QCOMPARE(window.findChild<QLabel*>("version")->text(),QString(STUDIO_VERSION));QVERIFY(window.windowTitle().contains(STUDIO_VERSION));QVERIFY(!window.windowIcon().isNull());
+        auto page=window.buildPage;QVERIFY(page);page->findChild<QLineEdit*>("buildSource")->setText("C:/source with spaces");page->findChild<QLineEdit*>("buildTarget")->setText("C:/llama-build");
+        QCOMPARE(window.config.metadata.value("build").toObject().value("sourceDirectory").toString(),QString("C:/source with spaces"));
+        Config loaded;QString error;QVERIFY(loaded.load(window.config.save(),&error));QCOMPARE(BuildSettings::fromJson(loaded.metadata.value("build").toObject()).targetDirectory,QString("C:/llama-build"));
+        window.tabs->setCurrentWidget(page);QApplication::processEvents();
+        if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR"))window.grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/builder-preview.png");
+        window.close();
     }
     void releaseChecks() {
         QTcpServer api; QVERIFY(api.listen(QHostAddress::LocalHost, 0));

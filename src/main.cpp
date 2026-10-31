@@ -1,11 +1,12 @@
 #include "mainwindow.h"
+#include "version.h"
 #include <QApplication>
 #include <QFile>
 #include <QTimer>
 #include <QStyleFactory>
 int main(int argc, char **argv) {
     QApplication app(argc, argv); app.setApplicationName("LlamaStudio"); app.setOrganizationName("LlamaStudio");
-    app.setApplicationVersion("0.2.0");
+    app.setApplicationVersion(STUDIO_VERSION);app.setWindowIcon(QIcon(":/app-icon.png"));
     app.setStyle(QStyleFactory::create("Fusion"));
     QFile style(":/style.qss"); if (style.open(QIODevice::ReadOnly)) app.setStyleSheet(QString::fromUtf8(style.readAll()));
     MainWindow window(nullptr, !app.arguments().contains("--smoke-test")); window.show();

@@ -1,0 +1,2 @@
+#pragma once
+#define STUDIO_VERSION "@PROJECT_VERSION@"

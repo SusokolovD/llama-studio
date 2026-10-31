@@ -1,6 +1,7 @@
 QWidget { background: #12151c; color: #e3e7f0; font-family: 'Segoe UI'; font-size: 13px; }
 QMainWindow, QDialog { background: #12151c; }
 QLabel#title { font-size: 27px; font-weight: 700; }
+QLabel#version { color: #a4c8ff; background: #263855; border-radius: 6px; padding: 5px 9px; font-weight: 600; }
 QLabel#subtitle { color: #929eb5; }
 QLabel, QCheckBox { background: transparent; }
 QLabel#status { background: #222b3d; border-radius: 12px; padding: 8px 18px; color: #9ebaff; }

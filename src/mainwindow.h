@@ -14,6 +14,7 @@ class QTabWidget;
 class QLabel;
 class QPushButton;
 class QVBoxLayout;
+class BuilderPage;
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
@@ -37,6 +38,8 @@ private:
     QLabel *status, *count;
     QPushButton *startButton, *stopButton, *fitButton, *cancelFitButton, *openButton;
     QWidget *editor;
+    BuilderPage *buildPage=nullptr;
+    bool closeAfterBuild=false;
     QByteArray fitOutput, serverPending, serverErrorPending, fitPending, fitErrorPending;
     QUrl runningUrl;
     QByteArray runningKey;

@@ -2,9 +2,24 @@
 #include <QFileInfo>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QDir>
+#include <QFile>
+#include <QTimer>
 #include <cstdio>
 int main(int argc, char **argv) {
     QCoreApplication app(argc, argv); auto args = app.arguments();
+    if(args.contains("--fail-build"))return 42;
+    if(args.contains("--sleep-build")){QTimer::singleShot(60000,&app,&QCoreApplication::quit);return app.exec();}
+    if(args.contains("--make-build")){
+        auto dir=args.value(args.indexOf("--make-build")+1);if(!QDir().mkpath(dir))return 44;
+#ifdef Q_OS_WIN
+        QString ext=".exe";
+#else
+        QString ext;
+#endif
+        for(auto name:{"llama-server","llama-fit-params"}){QString path=QDir(dir).filePath(QString(name)+ext);QFile::remove(path);if(!QFile::copy(app.applicationFilePath(),path))return 45;}
+        QFile dll(QDir(dir).filePath("zz-runtime.dll"));if(!dll.open(QIODevice::WriteOnly))return 46;dll.write("new runtime");return 0;
+    }
     if (args.contains("--version")) { printf("version: 42 (fixture)\n"); return 0; }
     if (args.contains("--list-devices")) { printf("Available devices:\n  CUDA0: Fixture A (24576 MiB, 22000 MiB free)\n  CUDA1: Fixture B (12288 MiB, 10000 MiB free)\n"); return 0; }
     int modelIndex = args.indexOf("--model");

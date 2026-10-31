@@ -1,5 +1,7 @@
 #include "mainwindow.h"
 #include "advisordialog.h"
+#include "builderpage.h"
+#include "version.h"
 #include <QtWidgets>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -65,10 +67,11 @@ MainWindow::MainWindow(QWidget *parent, bool checkUpdatesOnStartup) : QMainWindo
     if (checkUpdatesOnStartup) QTimer::singleShot(500, this, [this] { releases.check(config.directory); });
 }
 void MainWindow::buildUi() {
-    setWindowTitle("Llama Studio · локальный сервер"); resize(1280, 900); setMinimumSize(960, 680);
+    setWindowTitle(QString("Llama Studio %1 · локальный сервер").arg(STUDIO_VERSION));setWindowIcon(QIcon(":/app-icon.png")); resize(1280, 900); setMinimumSize(960, 680);
     auto root = new QWidget; setCentralWidget(root); auto main = new QVBoxLayout(root); main->setContentsMargins(24, 20, 24, 20); main->setSpacing(14);
     auto header = new QHBoxLayout;
-    auto titles = new QVBoxLayout; auto title = new QLabel("Llama Studio"); title->setObjectName("title"); titles->addWidget(title);
+    auto emblem=new QLabel;emblem->setPixmap(QPixmap(":/app-icon.png").scaled(58,58,Qt::KeepAspectRatio,Qt::SmoothTransformation));header->addWidget(emblem);
+    auto titles = new QVBoxLayout;auto titleRow=new QHBoxLayout;auto title = new QLabel("Llama Studio"); title->setObjectName("title");titleRow->addWidget(title);auto version=new QLabel(STUDIO_VERSION);version->setObjectName("version");titleRow->addWidget(version);titleRow->addStretch();titles->addLayout(titleRow);
     auto sub = new QLabel("Локальные модели. Полный контроль над запуском."); sub->setObjectName("subtitle"); titles->addWidget(sub); header->addLayout(titles); header->addStretch();
     status = new QLabel("Сервер остановлен"); status->setObjectName("status"); header->addWidget(status); main->addLayout(header);
     auto toolbar = new QHBoxLayout;
@@ -114,6 +117,11 @@ void MainWindow::buildUi() {
         QSaveFile f(path); if (!f.open(QIODevice::WriteOnly) || f.write(console->toPlainText().toUtf8()) < 0 || !f.commit()) error("Не удалось сохранить журнал");
     }); connect(button("Очистить", logbar), &QPushButton::clicked, this, [this] { console->clear(); }); cl->addLayout(logbar);
     console = new QPlainTextEdit; console->setReadOnly(true); console->setMaximumBlockCount(10000); cl->addWidget(console, 1); tabs->addTab(page, "Сервер · журнал");
+    buildPage=new BuilderPage;buildPage->loadSettings(config.metadata.value("build").toObject());tabs->addTab(buildPage,"Сборка llama.cpp");
+    connect(buildPage,&BuilderPage::settingsChanged,this,[this](const QJsonObject &s){config.metadata["build"]=s;});
+    connect(buildPage,&BuilderPage::startRequested,this,[this]{if(server.state()!=QProcess::NotRunning||fit.state()!=QProcess::NotRunning){error("Остановите сервер и fit перед обновлением бинарников.");return;}buildPage->start();});
+    connect(buildPage,&BuilderPage::busyChanged,this,[this](bool busy){directory->setEnabled(!busy);updateButtons();if(!busy&&closeAfterBuild)QTimer::singleShot(0,this,&QWidget::close);});
+    connect(buildPage,&BuilderPage::deployed,this,[this](const QString &path){directory->setText(path);status->setText("llama.cpp обновлён");});
     auto bottom = new QHBoxLayout; bottom->addWidget(new QLabel("Контекст для fit:")); context = new QSpinBox; context->setRange(1, 2147483647); context->setValue(config.fitContext); context->setSingleStep(1024); bottom->addWidget(context);
     connect(context, qOverload<int>(&QSpinBox::valueChanged), this, [this](int n) { config.fitContext = n; });
     fitButton = button("Подобрать параметры", bottom); fitButton->setToolTip("Подбор размещения в памяти для указанного контекста. Не измеряет скорость. Дополнительные модели могут потребовать отдельный запас памяти.");
@@ -212,7 +220,7 @@ void MainWindow::updatePreview() {
 }
 void MainWindow::updateButtons() {
     bool s = server.state() != QProcess::NotRunning, f = fit.state() != QProcess::NotRunning;
-    startButton->setEnabled(!s && !f); stopButton->setEnabled(s); fitButton->setEnabled(!s && !f); cancelFitButton->setEnabled(f); openButton->setEnabled(s && !stopping);
+    bool building=buildPage&&buildPage->busy();startButton->setEnabled(!s && !f&&!building); stopButton->setEnabled(s); fitButton->setEnabled(!s && !f&&!building); cancelFitButton->setEnabled(f); openButton->setEnabled(s && !stopping);
 }
 void MainWindow::error(const QString &text) { QMessageBox::warning(this, "Llama Studio", text); }
 void MainWindow::log(const QString &text) { auto cursor = console->textCursor(); cursor.movePosition(QTextCursor::End); cursor.insertText(text); console->setTextCursor(cursor); console->ensureCursorVisible(); }
@@ -227,12 +235,13 @@ void MainWindow::readLog(QProcess &process, bool out, QByteArray &pending, bool 
     if (finish || pending.size() > 65536) { log(QString::fromUtf8(pending)); pending.clear(); }
 }
 void MainWindow::loadFile(bool catalog) {
-    if (fit.state() != QProcess::NotRunning) { error("Дождитесь завершения подбора или отмените его."); return; }
+    if (fit.state() != QProcess::NotRunning||buildPage->busy()) { error("Дождитесь завершения подбора/сборки или отмените их."); return; }
     auto path = QFileDialog::getOpenFileName(this, catalog ? "Каталог параметров" : "Конфигурация", {}, "JSON (*.json)"); if (path.isEmpty()) return;
     QFile file(path); QString message; Config next;
     if (!file.open(QIODevice::ReadOnly) || !next.load(file.readAll(), &message)) { error("Не удалось загрузить файл. " + message); return; }
-    if (catalog) { next.directory = config.directory; next.fitContext = config.fitContext; }
+    if (catalog) { next.directory = config.directory; next.fitContext = config.fitContext;next.metadata["build"]=config.metadata.value("build"); }
     config = next; directory->setText(config.directory); context->setValue(config.fitContext);
+    buildPage->loadSettings(config.metadata.value("build").toObject());
     navigation->blockSignals(true); navigation->clear(); navigation->addItem("Частые параметры"); navigation->addItem("Модели и адаптеры");
     for (auto group : config.metadata.value("groups").toArray()) navigation->addItem(groupLabel(group.toString()));
     navigation->addItem("Включённые параметры"); navigation->setCurrentRow(0); navigation->blockSignals(false); rebuild(); updatePreview();
@@ -248,7 +257,7 @@ void MainWindow::reset() {
     rebuild(); updatePreview();
 }
 void MainWindow::showAdvisor() {
-    if(server.state()!=QProcess::NotRunning || fit.state()!=QProcess::NotRunning){error("Остановите сервер и дождитесь завершения fit, чтобы помощник оценивал свободную память.");return;}
+    if(server.state()!=QProcess::NotRunning || fit.state()!=QProcess::NotRunning||buildPage->busy()){error("Остановите сервер и дождитесь завершения fit/сборки перед настройкой.");return;}
     AdvisorDialog dialog(config,this);
     if(dialog.exec()!=QDialog::Accepted)return;
     QString message;
@@ -270,7 +279,7 @@ QUrl MainWindow::endpoint() const {
     QUrl url; url.setScheme(config.find("--ssl-cert-file") && config.find("--ssl-cert-file")->enabled ? "https" : "http"); url.setHost(host); url.setPort(val("--port", "9931").toInt()); url.setPath(val("--api-prefix", "") + "/"); return url;
 }
 void MainWindow::launchServer() {
-    if (server.state() != QProcess::NotRunning || fit.state() != QProcess::NotRunning) return;
+    if (server.state() != QProcess::NotRunning || fit.state() != QProcess::NotRunning||buildPage->busy()) return;
     bool router = config.find("--models-dir") && config.find("--models-dir")->enabled;
     bool remote = (config.find("--hf-repo") && config.find("--hf-repo")->enabled) || (config.find("--model-url") && config.find("--model-url")->enabled);
     if (!router && !remote && !validateModel()) return;
@@ -283,7 +292,7 @@ void MainWindow::launchServer() {
     server.setWorkingDirectory(QFileInfo(exe.path).absolutePath()); server.setProgram(exe.path); server.setArguments(args); status->setText("Запуск сервера…"); log("\n[Запуск сервера]\n"); server.start(); updateButtons();
 }
 void MainWindow::launchFit() {
-    if (server.state() != QProcess::NotRunning || fit.state() != QProcess::NotRunning || !validateModel()) return;
+    if (server.state() != QProcess::NotRunning || fit.state() != QProcess::NotRunning||buildPage->busy() || !validateModel()) return;
     auto exe = findExecutable(config.directory, true); if (exe.path.isEmpty()) { error("Не найден llama-fit-params (или llama fit-params). Установите сборку llama.cpp с этой утилитой."); return; }
     QStringList args = exe.prefix; args << "--model" << config.find("--model")->value.toString() << "--ctx-size" << QString::number(config.fitContext);
     // Only model-placement arguments accepted by the fitting utility. GPU layers and
@@ -318,6 +327,7 @@ void MainWindow::pollHealth() {
     });
 }
 void MainWindow::closeEvent(QCloseEvent *event) {
+    if(buildPage->busy()){closeAfterBuild=true;buildPage->cancel();event->ignore();return;}
     if (server.state() != QProcess::NotRunning || fit.state() != QProcess::NotRunning) {
         if (QMessageBox::question(this, "Завершить работу", "Остановить запущенные процессы и закрыть приложение?") != QMessageBox::Yes) { event->ignore(); return; }
         healthTimer.stop();
