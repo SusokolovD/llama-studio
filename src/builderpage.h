@@ -8,6 +8,8 @@ public:
     explicit BuilderPage(QWidget *parent=nullptr);
     void loadSettings(const QJsonObject &settings);
     BuildSettings settings() const;
+    bool loadRecipeFile(const QString &path,QString *error);
+    bool saveRecipeFile(const QString &path,QString *error) const;
     bool busy() const{return service.busy();}
     void start();
     void cancel(){service.cancel();}
@@ -21,6 +23,7 @@ private:
     QLineEdit *source,*binary,*target;
     QPlainTextEdit *commands,*log;
     QLabel *state;
+    QLabel *recipeState;
     QPushButton *startButton,*cancelButton;
     QWidget *fields;
 };

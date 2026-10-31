@@ -7,6 +7,8 @@
 #include <QFileInfo>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QJsonDocument>
+#include <QJsonArray>
 
 namespace {
 QString resolvedPath(QString path) {
@@ -85,9 +87,18 @@ QString deployFiles(const BuildSettings &s,const std::shared_ptr<std::atomic_boo
 }
 }
 BuildSettings BuildSettings::fromJson(const QJsonObject &j) {
-    return {j.value("sourceDirectory").toString(),j.value("binaryDirectory").toString("build/bin/Release"),j.value("targetDirectory").toString(QDir(QCoreApplication::applicationDirPath()).filePath("llama-build")),j.value("commands").toString("cmake -S . -B build -DCMAKE_BUILD_TYPE=Release\ncmake --build build --config Release --parallel 4")};
+    QString recipe;
+    if(j.value("recipe").isObject())recipe=BuildRecipe::format(j.value("recipe").toObject());
+    else if(j.value("recipeText").isString())recipe=j.value("recipeText").toString();
+    else if(j.value("commands").isArray())recipe=BuildRecipe::format({{"schemaVersion",1},{"commands",j.value("commands")}});
+    else if(j.value("commands").isString())recipe=BuildRecipe::fromLegacy(j.value("commands").toString());
+    else recipe=BuildRecipe::defaults();
+    return {j.value("sourceDirectory").toString(),j.value("binaryDirectory").toString("build/bin/Release"),j.value("targetDirectory").toString(QDir(QCoreApplication::applicationDirPath()).filePath("llama-build")),recipe};
 }
-QJsonObject BuildSettings::toJson() const{return {{"sourceDirectory",sourceDirectory},{"binaryDirectory",binaryDirectory},{"targetDirectory",targetDirectory},{"commands",commands}};}
+QJsonObject BuildSettings::toJson() const{
+    QJsonObject result{{"sourceDirectory",sourceDirectory},{"binaryDirectory",binaryDirectory},{"targetDirectory",targetDirectory}};
+    auto doc=QJsonDocument::fromJson(commands.toUtf8());if(doc.isObject())result["recipe"]=doc.object();else result["recipeText"]=commands;return result;
+}
 bool BuildSettings::validate(QString *error) const {
     auto fail=[&](const QString &message){if(error)*error=message;return false;};
     if(sourceDirectory.trimmed().isEmpty()||!QFileInfo(sourceDirectory).isDir()||!QFileInfo(QDir(sourceDirectory).filePath(".git")).exists()||!QFileInfo(QDir(sourceDirectory).filePath("CMakeLists.txt")).isFile())return fail("Укажите корень Git-репозитория исходников llama.cpp с CMakeLists.txt.");
@@ -95,9 +106,7 @@ bool BuildSettings::validate(QString *error) const {
     const QString source=resolvedPath(sourceDirectory),binary=absoluteBinary(*this),target=resolvedPath(targetDirectory);
     if(QDir(target).isRoot()||target.endsWith("/.git",Qt::CaseInsensitive)||target.contains("/.git/",Qt::CaseInsensitive))return fail("Выберите отдельную папку назначения, а не корень диска или служебную папку Git.");
     if(within(source,target)||within(binary,target)||within(target,binary))return fail("Папка назначения должна быть отдельной: она не может содержать исходники или пересекаться с папкой готовых бинарников.");
-    int count=0;
-    for(auto line:commands.split('\n')){line=line.trimmed();if(line.isEmpty()||line.startsWith('#'))continue;QStringList parts;QString why;if(!Config::tokenize(line,&parts,&why)||parts.isEmpty()||parts.first().isEmpty())return fail("Некорректная команда: "+why);++count;}
-    return count>0 || fail("Введите хотя бы одну команду сборки.");
+    return BuildRecipe::parse(commands.toUtf8(),nullptr,error);
 }
 BuildService::BuildService(QObject *parent):QObject(parent) {
     process.setProcessChannelMode(QProcess::MergedChannels);
@@ -112,14 +121,14 @@ bool BuildService::start(const BuildSettings &s,QString *error) {
     if(!s.validate(error))return false;
     if(copyThread){copyThread->wait();delete copyThread;copyThread=nullptr;}
     settings=s;settings.sourceDirectory=resolvedPath(s.sourceDirectory);settings.targetDirectory=resolvedPath(s.targetDirectory);commands.clear();
-    for(auto line:s.commands.split('\n'))if(!line.trimmed().isEmpty()&&!line.trimmed().startsWith('#'))commands<<line.trimmed();
+    if(!BuildRecipe::parse(s.commands.toUtf8(),&commands,error))return false;
     step=0;pending.clear();canceled=std::make_shared<std::atomic_bool>(false);active=true;++generation;emit busyChanged(true);next();return true;
 }
 void BuildService::next() {
     if(canceled->load()){complete(false,"Сборка отменена.");return;}
     QString program;QStringList args;
     if(step==0){program="git";args=QStringList{"-C",settings.sourceDirectory,"pull","--ff-only"};emit phaseChanged("Обновление исходников · git pull --ff-only");}
-    else if(step<=commands.size()){QString why;Config::tokenize(commands[step-1],&args,&why);program=args.takeFirst();emit phaseChanged(QString("Сборка · команда %1 из %2").arg(step).arg(commands.size()));}
+    else if(step<=commands.size()){const auto &command=commands[step-1];program=command.program;args=command.arguments;emit phaseChanged(QString("Сборка · команда %1 из %2").arg(step).arg(commands.size()));}
     else {deploy();return;}
     ++step;emit output("\n> "+Config::displayCommand(program,args,false)+"\n");process.setWorkingDirectory(settings.sourceDirectory);process.start(program,args);
 }

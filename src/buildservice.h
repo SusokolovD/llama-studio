@@ -5,6 +5,7 @@
 #include <QThread>
 #include <atomic>
 #include <memory>
+#include "buildrecipe.h"
 struct BuildSettings {
     QString sourceDirectory, binaryDirectory, targetDirectory, commands;
     static BuildSettings fromJson(const QJsonObject &json);
@@ -29,7 +30,7 @@ private:
     QProcess treeKiller;
     QThread *copyThread=nullptr;
     BuildSettings settings;
-    QStringList commands;
+    QVector<BuildCommand> commands;
     QByteArray pending;
     int step=0;
     bool active=false;

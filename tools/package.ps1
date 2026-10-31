@@ -13,7 +13,7 @@ foreach ($name in @('Qt5Core.dll', 'Qt5Gui.dll', 'Qt5Network.dll', 'Qt5Widgets.d
 foreach ($name in @('qwindows.dll', 'qoffscreen.dll')) {
     Copy-Item -LiteralPath (Join-Path $QtRoot "plugins\platforms\$name") -Destination (Join-Path $outputPath 'plugins\platforms')
 }
-foreach ($relative in @('resources\parameters.json', 'resources\llama.cpp-LICENSE', 'README.md', 'ROADMAP.md')) {
+foreach ($relative in @('resources\parameters.json', 'resources\build-commands.json', 'resources\llama.cpp-LICENSE', 'README.md', 'ROADMAP.md')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot $relative) -Destination $outputPath
 }
 Set-Content -LiteralPath (Join-Path $outputPath 'qt.conf') -Value "[Paths]`nPlugins=plugins" -Encoding ascii

@@ -118,6 +118,7 @@ void MainWindow::buildUi() {
     }); connect(button("Очистить", logbar), &QPushButton::clicked, this, [this] { console->clear(); }); cl->addLayout(logbar);
     console = new QPlainTextEdit; console->setReadOnly(true); console->setMaximumBlockCount(10000); cl->addWidget(console, 1); tabs->addTab(page, "Сервер · журнал");
     buildPage=new BuilderPage;buildPage->loadSettings(config.metadata.value("build").toObject());tabs->addTab(buildPage,"Сборка llama.cpp");
+    config.metadata["build"]=buildPage->settings().toJson();
     connect(buildPage,&BuilderPage::settingsChanged,this,[this](const QJsonObject &s){config.metadata["build"]=s;});
     connect(buildPage,&BuilderPage::startRequested,this,[this]{if(server.state()!=QProcess::NotRunning||fit.state()!=QProcess::NotRunning){error("Остановите сервер и fit перед обновлением бинарников.");return;}buildPage->start();});
     connect(buildPage,&BuilderPage::busyChanged,this,[this](bool busy){directory->setEnabled(!busy);updateButtons();if(!busy&&closeAfterBuild)QTimer::singleShot(0,this,&QWidget::close);});
@@ -242,6 +243,7 @@ void MainWindow::loadFile(bool catalog) {
     if (catalog) { next.directory = config.directory; next.fitContext = config.fitContext;next.metadata["build"]=config.metadata.value("build"); }
     config = next; directory->setText(config.directory); context->setValue(config.fitContext);
     buildPage->loadSettings(config.metadata.value("build").toObject());
+    config.metadata["build"]=buildPage->settings().toJson();
     navigation->blockSignals(true); navigation->clear(); navigation->addItem("Частые параметры"); navigation->addItem("Модели и адаптеры");
     for (auto group : config.metadata.value("groups").toArray()) navigation->addItem(groupLabel(group.toString()));
     navigation->addItem("Включённые параметры"); navigation->setCurrentRow(0); navigation->blockSignals(false); rebuild(); updatePreview();

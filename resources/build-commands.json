@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "name": "CMake Release",
+  "commands": [
+    {
+      "program": "cmake",
+      "arguments": ["-S", ".", "-B", "build", "-DCMAKE_BUILD_TYPE=Release"]
+    },
+    {
+      "program": "cmake",
+      "arguments": ["--build", "build", "--config", "Release", "--parallel", "4"]
+    }
+  ]
+}

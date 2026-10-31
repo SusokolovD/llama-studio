@@ -17,9 +17,17 @@ class BuildTest:public QObject {
         QProcess clone;clone.start("git",{"clone",origin,source});if(!clone.waitForFinished(10000)||clone.exitCode()!=0)return false;
         write(QDir(origin).filePath("CMakeLists.txt"),"# v2\n");
         if(!git(origin,{"add","CMakeLists.txt"})||!git(origin,{"-c","user.name=Test","-c","user.email=test@example.invalid","commit","-m","update"}))return false;
-        *s={source,"out",QDir(root).filePath("llama-build"),QString("\"%1\" --make-build \"%2\"").arg(QString(FIXTURE_PATH),QDir(source).filePath("out"))};return true;
+        *s={source,"out",QDir(root).filePath("llama-build"),BuildRecipe::fromLegacy(QString("\"%1\" --make-build \"%2\"").arg(QString(FIXTURE_PATH),QDir(source).filePath("out")))};return true;
     }
 private slots:
+    void jsonRecipeAndMigration(){
+        const QByteArray json=R"({"schemaVersion":1,"commands":[{"program":"C:\\Program Files\\cmake.exe","arguments":["-DNAME=a b","C:\\папка с пробелом\\build",""]}]})";
+        QVector<BuildCommand> commands;QString error;QVERIFY2(BuildRecipe::parse(json,&commands,&error),qPrintable(error));QCOMPARE(commands.size(),1);QCOMPARE(commands[0].arguments[0],QString("-DNAME=a b"));QCOMPARE(commands[0].arguments[1],QString::fromUtf8("C:\\папка с пробелом\\build"));QCOMPARE(commands[0].arguments[2],QString());
+        auto snapshot=commands;QVERIFY(!BuildRecipe::parse(R"({"schemaVersion":1,"commands":[{"program":"cmake","arguments":[7]}]})",&commands,&error));QCOMPARE(commands.size(),snapshot.size());
+        QVERIFY(!BuildRecipe::parse(R"({"schemaVersion":2,"commands":[]})",nullptr,&error));
+        auto old=BuildSettings::fromJson({{"commands","cmake --build \"build folder\"\n# note\ncmake --version"}});QVERIFY(BuildRecipe::parse(old.commands.toUtf8(),&commands,&error));QCOMPARE(commands.size(),2);QCOMPARE(commands[0].arguments[1],QString("build folder"));QVERIFY(old.toJson().value("recipe").isObject());
+        old.commands="{broken JSON";auto restored=BuildSettings::fromJson(old.toJson());QCOMPARE(restored.commands,old.commands);
+    }
     void pullBuildDeployAndReplace(){
         QTemporaryDir root;BuildSettings s;QVERIFY(prepare(root.path(),&s));QDir().mkpath(s.targetDirectory);
 #ifdef Q_OS_WIN
@@ -36,8 +44,8 @@ private slots:
     }
     void buildFailureAndCancelPreserveTarget(){
         QTemporaryDir root;BuildSettings s;QVERIFY(prepare(root.path(),&s));QDir().mkpath(s.targetDirectory);write(QDir(s.targetDirectory).filePath("keep.txt"),"old");
-        s.commands=QString("\"%1\" --fail-build").arg(QString(FIXTURE_PATH));BuildService service;QSignalSpy done(&service,&BuildService::finished);QString error;QVERIFY(service.start(s,&error));QTRY_COMPARE_WITH_TIMEOUT(done.size(),1,20000);QVERIFY(!done[0][0].toBool());QCOMPARE(read(QDir(s.targetDirectory).filePath("keep.txt")),QByteArray("old"));
-        done.clear();s.commands=QString("\"%1\" --sleep-build").arg(QString(FIXTURE_PATH));
+        s.commands=BuildRecipe::fromLegacy(QString("\"%1\" --fail-build").arg(QString(FIXTURE_PATH)));BuildService service;QSignalSpy done(&service,&BuildService::finished);QString error;QVERIFY(service.start(s,&error));QTRY_COMPARE_WITH_TIMEOUT(done.size(),1,20000);QVERIFY(!done[0][0].toBool());QCOMPARE(read(QDir(s.targetDirectory).filePath("keep.txt")),QByteArray("old"));
+        done.clear();s.commands=BuildRecipe::fromLegacy(QString("\"%1\" --sleep-build").arg(QString(FIXTURE_PATH)));
         connect(&service,&BuildService::phaseChanged,&service,[&service](const QString &phase){if(phase.startsWith(QString::fromUtf8("Сборка ·")))QTimer::singleShot(150,&service,&BuildService::cancel);});
         QVERIFY(service.start(s,&error));QTRY_COMPARE_WITH_TIMEOUT(done.size(),1,15000);QVERIFY(!done[0][0].toBool());QCOMPARE(read(QDir(s.targetDirectory).filePath("keep.txt")),QByteArray("old"));
     }

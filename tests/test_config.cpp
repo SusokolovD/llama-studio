@@ -10,6 +10,13 @@ class ConfigTest : public QObject {
         if (!c.load(f.readAll(), &e)) qFatal("%s", qPrintable(e)); return c;
     }
 private slots:
+    void kvMemoryScaling(){
+        ModelInfo m;m.architecture="llama";m.layers=32;m.heads=32;m.kvHeads=8;m.embedding=4096;
+        QCOMPARE(estimateKvMiB(m,8192,"f16"),1024.0);QCOMPARE(estimateKvMiB(m,16384,"f16"),2048.0);QCOMPARE(estimateKvMiB(m,8192,"q8_0"),544.0);QCOMPARE(estimateKvMiB(m,8192,"q4_0"),288.0);
+        m.keyLength=64;m.valueLength=128;QCOMPARE(estimateKvMiB(m,8192,"f16"),768.0);
+        m.slidingWindow=4096;QCOMPARE(estimateKvMiB(m,8192,"f16"),-1.0);m.slidingWindow=0;m.architecture="unknown";QCOMPARE(estimateKvMiB(m,8192,"f16"),-1.0);
+        AdviceInput input;input.model=m;input.devices={{"CUDA0","A",10240,12288}};auto html=memoryHtml(input);QVERIFY(html.contains("9216"));QVERIFY(html.contains(QString::fromUtf8("Учебный пример")));
+    }
     void russianCatalog() {
         auto c=catalog();
         for(const auto &p:c.parameters){QVERIFY(QRegularExpression("[А-Яа-я]").match(p.definition.value("label").toString()).hasMatch());QVERIFY(QRegularExpression("[А-Яа-я]").match(p.definition.value("description").toString()).hasMatch());}
@@ -17,11 +24,12 @@ private slots:
     void ggufMetadataAndInvalidInput() {
         QTemporaryDir dir;QFile f(dir.filePath("tiny.gguf"));QVERIFY(f.open(QIODevice::WriteOnly));QDataStream s(&f);s.setByteOrder(QDataStream::LittleEndian);
         auto string=[&](const QByteArray &v){s<<quint64(v.size());s.writeRawData(v.constData(),v.size());};
-        s.writeRawData("GGUF",4);s<<quint32(3)<<quint64(0)<<quint64(9);
+        s.writeRawData("GGUF",4);s<<quint32(3)<<quint64(0)<<quint64(12);
         for(const auto &pair:QVector<QPair<QByteArray,QByteArray>>{{"general.architecture","llama"},{"general.name","test model"},{"tokenizer.chat_template","{{ messages }}"}}){string(pair.first);s<<quint32(8);string(pair.second);}
         string("tokenizer.ggml.tokens");s<<quint32(9)<<quint32(8)<<quint64(2);string("token A");string("token B");
         for(const auto &pair:QVector<QPair<QByteArray,quint32>>{{"llama.context_length",32768},{"llama.block_count",32},{"llama.embedding_length",4096},{"llama.attention.head_count",32},{"llama.attention.head_count_kv",8}}){string(pair.first);s<<quint32(4)<<pair.second;}
-        f.close();auto info=readModelInfo(f.fileName());QVERIFY2(info.error.isEmpty(),qPrintable(info.error));QCOMPARE(info.trainingContext,qint64(32768));QCOMPARE(info.layers,qint64(32));QVERIFY(info.hasChatTemplate);
+        for(const auto &pair:QVector<QPair<QByteArray,quint32>>{{"llama.attention.key_length",64},{"llama.attention.value_length",128},{"llama.attention.sliding_window",0}}){string(pair.first);s<<quint32(4)<<pair.second;}
+        f.close();auto info=readModelInfo(f.fileName());QVERIFY2(info.error.isEmpty(),qPrintable(info.error));QCOMPARE(info.trainingContext,qint64(32768));QCOMPARE(info.layers,qint64(32));QVERIFY(info.hasChatTemplate);QCOMPARE(info.keyLength,qint64(64));QCOMPARE(info.valueLength,qint64(128));
         AdviceInput input;input.model=info;input.agent=true;input.contextPerSlot=16384;input.slotCount=2;input.devices={{"CUDA0","A",24000,24000},{"CUDA1","B",12000,12000}};
         auto advice=makeAdvice(input);QVERIFY(advice.error.isEmpty());QCOMPARE(advice.totalContext,32768);QVERIFY(advice.estimatedKvMiB>0);
         auto c=catalog();QString error;QVERIFY2(advice.apply(&c,&error),qPrintable(error));QCOMPARE(c.find("--device")->value.toString(),QString("CUDA0,CUDA1"));QCOMPARE(c.find("--split-mode")->value.toString(),QString("layer"));QVERIFY(!c.find("--tensor-split")->enabled);QCOMPARE(c.fitContext,32768);QVERIFY(!c.find("--agent")->enabled);QVERIFY(!c.find("--temp")->enabled);

@@ -21,8 +21,8 @@ private:
     QComboBox *mode, *sampling, *cache;
     QSpinBox *context, *slotCount, *reserve;
     QTableWidget *devices;
-    QTextBrowser *report;
-    QLabel *modelLabel, *deviceLabel;
+    QTextBrowser *report,*memoryReport;
+    QLabel *modelLabel, *deviceLabel,*memoryEstimate;
     QCheckBox *cpu;
     QPushButton *detect, *apply, *applyFit;
     void updateAdvice();

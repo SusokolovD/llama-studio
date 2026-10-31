@@ -1,7 +1,7 @@
 #include "advisordialog.h"
 #include <QtWidgets>
 AdvisorDialog::AdvisorDialog(const Config &config,QWidget *parent):QDialog(parent),config(config) {
-    setWindowTitle("Помощник настройки модели"); resize(1180,850); setMinimumSize(980,700);
+    setWindowTitle("Помощник настройки модели"); resize(1280,880); setMinimumSize(980,700);
     auto root=new QVBoxLayout(this); auto split=new QSplitter; root->addWidget(split,1);
     auto settings=new QWidget; auto left=new QVBoxLayout(settings); split->addWidget(settings);
     auto heading=new QLabel("Модель и задача"); heading->setObjectName("title"); left->addWidget(heading);
@@ -14,17 +14,26 @@ AdvisorDialog::AdvisorDialog(const Config &config,QWidget *parent):QDialog(paren
     auto inspect=new QPushButton("Прочитать метаданные GGUF"); left->addWidget(inspect); connect(inspect,&QPushButton::clicked,this,&AdvisorDialog::inspectModel);
     modelLabel=new QLabel("Считываются только метаданные, веса не загружаются в RAM/GPU."); modelLabel->setWordWrap(true); modelLabel->setTextFormat(Qt::PlainText); left->addWidget(modelLabel);
     auto form=new QFormLayout; mode=new QComboBox; mode->addItems({"Чат и диалоги","Агентское программирование"});mode->setCurrentIndex(saved.value("mode").toInt(0)); form->addRow("Задача",mode);
-    context=new QSpinBox; context->setRange(1,1048576); context->setSingleStep(1024); context->setValue(saved.value("contextPerSlot").toInt(8192)); form->addRow("Токенов на диалог",context);
+    context=new QSpinBox;context->setObjectName("advisorContext"); context->setRange(1,1048576); context->setSingleStep(1024); context->setValue(saved.value("contextPerSlot").toInt(8192)); form->addRow("Токенов на диалог",context);
     slotCount=new QSpinBox; slotCount->setRange(1,32); slotCount->setValue(saved.value("slots").toInt(1)); form->addRow("Одновременных диалогов",slotCount);
     reserve=new QSpinBox; reserve->setRange(0,1048576); reserve->setSingleStep(256); reserve->setValue(saved.value("reserveMiB").toInt(1024)); reserve->setSuffix(" МиБ"); form->addRow("Резерв каждой GPU",reserve);
-    cache=new QComboBox; cache->addItem("f16 — исходное качество","f16"); cache->addItem("q8_0 — экономия памяти","q8_0"); cache->addItem("q4_0 — сильное сжатие","q4_0"); form->addRow("KV-кэш",cache);
+    cache=new QComboBox;cache->setObjectName("advisorCache"); cache->addItem("f16 — исходное качество","f16"); cache->addItem("q8_0 — экономия памяти","q8_0"); cache->addItem("q4_0 — сильное сжатие","q4_0"); form->addRow("KV-кэш",cache);
     cache->setCurrentIndex(qMax(0,cache->findData(saved.value("cacheType").toString("f16"))));
     sampling=new QComboBox; sampling->addItems({"Не менять: по карточке модели","Пример для чата (0,7)","Пример для кода (0,2)"});sampling->setCurrentIndex(saved.value("sampling").toInt(0)); form->addRow("Сэмплирование",sampling); left->addLayout(form);
+    memoryEstimate=new QLabel;memoryEstimate->setObjectName("memoryEstimate");memoryEstimate->setWordWrap(true);left->addWidget(memoryEstimate);
+    context->setToolTip("Окно одного диалога включает вход, историю и ответ. Во вкладке «Память» показаны расход KV и сравнение размеров окна.");
+    reserve->setToolTip("Целевой запас fit сверх уже занятой VRAM. Не выделяется заранее. Нужен на каждой GPU; подробности — «Память» и «Справочник».");
+    sampling->setToolTip("Температура и фильтры зависят от модели. Примеры и объяснения top-k/top-p/min-p — во вкладке «Справочник».");
+    cache->setToolTip("Тип KV не равен квантованию весов GGUF. Меняет память контекста и может влиять на качество; сравнение — во вкладке «Память».");
     cpu=new QCheckBox("Только CPU (без видеокарт)");cpu->setChecked(saved.value("cpuOnly").toBool(false)); left->addWidget(cpu);
     auto gpuRow=new QHBoxLayout; detect=new QPushButton("Найти GPU через llama.cpp"); gpuRow->addWidget(detect); auto manual=new QPushButton("Добавить вручную"); gpuRow->addWidget(manual); left->addLayout(gpuRow);
     devices=new QTableWidget(0,5); devices->setHorizontalHeaderLabels({"Исп.","ID устройства","Название","Всего, МиБ","Свободно, МиБ"}); devices->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents); devices->horizontalHeader()->setSectionResizeMode(2,QHeaderView::Stretch); devices->setMinimumHeight(140); left->addWidget(devices,1);
     deviceLabel=new QLabel("Выберите нужные GPU одного backend. Свободную память можно уточнить вручную; ID должны совпадать со списком llama.cpp."); deviceLabel->setWordWrap(true); deviceLabel->setTextFormat(Qt::PlainText); left->addWidget(deviceLabel);
-    report=new QTextBrowser; report->setOpenExternalLinks(true); split->addWidget(report); split->setSizes({530,650});
+    auto insights=new QTabWidget;insights->setObjectName("advisorInsights");
+    report=new QTextBrowser; report->setOpenExternalLinks(true);insights->addTab(report,"Рекомендации");
+    memoryReport=new QTextBrowser;memoryReport->setObjectName("memoryReport");memoryReport->setOpenExternalLinks(true);insights->addTab(memoryReport,"Память");
+    auto guide=new QTextBrowser;guide->setObjectName("advisorGuide");guide->setOpenExternalLinks(true);guide->setSource(QUrl("qrc:/advisor-guide.html"));insights->addTab(guide,"Справочник");
+    split->addWidget(insights); split->setSizes({530,750});
     auto buttons=new QHBoxLayout; auto close=new QPushButton("Отмена"); buttons->addWidget(close); buttons->addStretch(); apply=new QPushButton("Применить в конфиг"); buttons->addWidget(apply); applyFit=new QPushButton("Применить и запустить fit"); applyFit->setObjectName("primary"); buttons->addWidget(applyFit); root->addLayout(buttons);
     connect(close,&QPushButton::clicked,this,&QDialog::reject); connect(apply,&QPushButton::clicked,this,[this]{runFit=false;accept();}); connect(applyFit,&QPushButton::clicked,this,[this]{runFit=true;accept();});
     connect(mode,qOverload<int>(&QComboBox::currentIndexChanged),this,[this](int n){int suggested=n?32768:8192;if(model.trainingContext>0)suggested=int(qMin<qint64>(suggested,model.trainingContext));context->setValue(suggested);updateAdvice();});
@@ -79,5 +88,8 @@ void AdvisorDialog::updateAdvice(){
     input.model=model;if(model.path!=path->text()){input.model=ModelInfo();input.model.path=path->text();input.model.error="Метаданные выбранного файла ещё не прочитаны.";}
     for(auto name:{"--mmproj","--spec-draft-model","--lora","--lora-scaled"})if(auto p=config.find(name))input.hasExtras|=p->enabled;
     for(int row=0;row<devices->rowCount();++row)if(devices->item(row,0)->checkState()==Qt::Checked){DeviceInfo d;d.id=devices->item(row,1)->text().trimmed();d.name=devices->item(row,2)->text();d.totalMiB=devices->item(row,3)->text().toLongLong();d.freeMiB=devices->item(row,4)->text().toLongLong();input.devices.append(d);}
-    recommendation=makeAdvice(input);report->setHtml(recommendation.html());bool ready=recommendation.error.isEmpty() && detector.state()==QProcess::NotRunning;apply->setEnabled(ready);applyFit->setEnabled(ready);
+    recommendation=makeAdvice(input);report->setHtml(recommendation.html());memoryReport->setHtml(memoryHtml(input));
+    const auto kv=estimateKvMiB(input.model,qint64(input.contextPerSlot)*input.slotCount,input.cacheType);
+    memoryEstimate->setText(kv<0?"KV-кэш: расчёт недоступен. Прочитайте GGUF; детали и учебный пример — во вкладке «Память».":QString("KV-кэш ≈ %1 МиБ (%2 ГиБ). Веса и рабочие буферы — отдельно. Подробнее: вкладка «Память».").arg(kv,0,'f',0).arg(kv/1024,0,'f',2));
+    bool ready=recommendation.error.isEmpty() && detector.state()==QProcess::NotRunning;apply->setEnabled(ready);applyFit->setEnabled(ready);
 }

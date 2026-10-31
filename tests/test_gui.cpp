@@ -24,6 +24,26 @@ private slots:
         if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR"))window.grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/builder-preview.png");
         window.close();
     }
+    void recipeFileImportExport(){
+        QTemporaryDir dir;BuilderPage page;auto edit=page.findChild<QPlainTextEdit*>("buildCommands");QVERIFY(edit);QString error;
+        const QString good=BuildRecipe::fromLegacy("cmake --version");QFile file(dir.filePath("commands.json"));QVERIFY(file.open(QIODevice::WriteOnly));file.write(good.toUtf8());file.close();
+        QVERIFY(page.loadRecipeFile(file.fileName(),&error));QCOMPARE(page.settings().commands,good);QVERIFY(page.saveRecipeFile(dir.filePath("saved.json"),&error));
+        QFile bad(dir.filePath("bad.json"));QVERIFY(bad.open(QIODevice::WriteOnly));bad.write("bad");bad.close();QVERIFY(!page.loadRecipeFile(bad.fileName(),&error));QCOMPARE(page.settings().commands,good);
+        edit->setPlainText("{bad JSON");QVERIFY(!page.saveRecipeFile(dir.filePath("saved.json"),&error));QFile saved(dir.filePath("saved.json"));QVERIFY(saved.open(QIODevice::ReadOnly));QVERIFY(BuildRecipe::parse(saved.readAll(),nullptr,&error));
+    }
+    void advisorLearningPages(){
+        QTemporaryDir dir;QFile gguf(dir.filePath("educational.gguf"));QVERIFY(gguf.open(QIODevice::WriteOnly));QDataStream stream(&gguf);stream.setByteOrder(QDataStream::LittleEndian);
+        auto string=[&](const QByteArray &s){stream<<quint64(s.size());stream.writeRawData(s.constData(),s.size());};stream.writeRawData("GGUF",4);stream<<quint32(3)<<quint64(0)<<quint64(8);
+        for(const auto &pair:QVector<QPair<QByteArray,QByteArray>>{{"general.architecture","llama"},{"general.name","Educational model"},{"tokenizer.chat_template","{{ messages }}"}}){string(pair.first);stream<<quint32(8);string(pair.second);}
+        for(const auto &pair:QVector<QPair<QByteArray,quint32>>{{"llama.context_length",32768},{"llama.block_count",32},{"llama.embedding_length",4096},{"llama.attention.head_count",32},{"llama.attention.head_count_kv",8}}){string(pair.first);stream<<quint32(4)<<pair.second;}gguf.close();
+        Config cfg;QFile catalog(":/parameters.json");QVERIFY(catalog.open(QIODevice::ReadOnly));QString error;QVERIFY(cfg.load(catalog.readAll(),&error));cfg.find("--model")->value=gguf.fileName();cfg.metadata["advisor"]=QJsonObject{{"cpuOnly",true}};
+        AdvisorDialog helper(cfg);helper.show();auto label=helper.findChild<QLabel*>("memoryEstimate");QVERIFY(label->text().contains("1024"));
+        helper.findChild<QSpinBox*>("advisorContext")->setValue(16384);QVERIFY(label->text().contains("2048"));helper.findChild<QComboBox*>("advisorCache")->setCurrentIndex(1);QVERIFY(label->text().contains("1088"));
+        auto guide=helper.findChild<QTextBrowser*>("advisorGuide");QVERIFY(guide->toPlainText().contains("--top-k"));QVERIFY(guide->toPlainText().contains(QString::fromUtf8("Температура")));
+        auto tabs=helper.findChild<QTabWidget*>("advisorInsights");QCOMPARE(tabs->count(),3);tabs->setCurrentIndex(1);QApplication::processEvents();
+        if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR"))helper.grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/advisor-memory-preview.png");
+        tabs->setCurrentIndex(2);if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR"))helper.grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/advisor-guide-preview.png");helper.close();
+    }
     void releaseChecks() {
         QTcpServer api; QVERIFY(api.listen(QHostAddress::LocalHost, 0));
         QByteArray payload = R"([{"tag_name":"b43","html_url":"https://github.com/ggml-org/llama.cpp/releases/tag/b43"},{"tag_name":"b44","html_url":"https://github.com/ggml-org/llama.cpp/releases/tag/b44","prerelease":true},{"tag_name":"b999","draft":true,"html_url":"https://github.com/ggml-org/llama.cpp/releases/tag/b999"},{"tag_name":"b9999","html_url":"https://example.com/evil"}])";

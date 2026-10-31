@@ -5,6 +5,7 @@ struct ModelInfo {
     QString path, name, architecture, error;
     qint64 fileBytes = 0, trainingContext = 0, layers = 0, heads = 0, kvHeads = 0, embedding = 0, shards = 1;
     bool hasChatTemplate = false;
+    qint64 keyLength = 0, valueLength = 0, slidingWindow = 0;
 };
 struct DeviceInfo { QString id, name; qint64 freeMiB = 0, totalMiB = 0; };
 struct AdviceInput {
@@ -27,3 +28,5 @@ struct Advice {
 ModelInfo readModelInfo(const QString &path);
 QVector<DeviceInfo> parseDevices(const QString &output);
 Advice makeAdvice(const AdviceInput &input);
+double estimateKvMiB(const ModelInfo &model,qint64 totalTokens,const QString &cacheType);
+QString memoryHtml(const AdviceInput &input);

@@ -1,1 +1,1 @@
-<RCC><qresource prefix="/"><file>parameters.json</file><file>style.qss</file><file>app-icon.png</file></qresource></RCC>
+<RCC><qresource prefix="/"><file>parameters.json</file><file>style.qss</file><file>app-icon.png</file><file>build-commands.json</file><file>advisor-guide.html</file></qresource></RCC>

@@ -1,14 +1,16 @@
 param(
     [string]$QtRoot = 'E:\Qt_installer\QtStaticSSL',
     [string]$CompilerBin = 'E:\Qt\Qt5.14.2\Tools\mingw730_32\bin',
-    [string]$MsysRoot = 'C:\msys64'
+    [string]$MsysRoot = 'C:\msys64',
+    [string]$BuildDirectory = 'build-static',
+    [string]$OutputDirectory = 'dist\LlamaStudio-static'
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $dependencyRoot = Join-Path $projectRoot 'build-static-deps'
 $sourceRoot = Join-Path $dependencyRoot 'openssl-OpenSSL_1_1_1w'
-$buildRoot = Join-Path $projectRoot 'build-static'
-$outputPath = Join-Path $projectRoot 'dist\LlamaStudio-static'
+$buildRoot = if([IO.Path]::IsPathRooted($BuildDirectory)) { $BuildDirectory } else { Join-Path $projectRoot $BuildDirectory }
+$outputPath = if([IO.Path]::IsPathRooted($OutputDirectory)) { $OutputDirectory } else { Join-Path $projectRoot $OutputDirectory }
 $env:PATH = "$CompilerBin;$env:PATH"
 function Check-Exit([string]$step) {
     if ($LASTEXITCODE -ne 0) { throw "$step failed (exit $LASTEXITCODE)" }
@@ -51,7 +53,7 @@ $exe = Join-Path $outputPath 'LlamaStudio.exe'
 Copy-Item -LiteralPath (Join-Path $buildRoot 'LlamaStudio.exe') -Destination $exe
 & (Join-Path $CompilerBin 'strip.exe') --strip-unneeded $exe
 Check-Exit 'Strip'
-foreach ($relative in @('resources\parameters.json', 'resources\llama.cpp-LICENSE', 'README.md', 'ROADMAP.md', 'STATIC-BUILD.md', 'THIRD-PARTY-NOTICES.md', 'CHANGELOG.md')) {
+foreach ($relative in @('resources\parameters.json', 'resources\build-commands.json', 'resources\llama.cpp-LICENSE', 'README.md', 'ROADMAP.md', 'STATIC-BUILD.md', 'THIRD-PARTY-NOTICES.md', 'CHANGELOG.md')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot $relative) -Destination $outputPath
 }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'resources\licenses') -Destination $outputPath -Recurse -Force

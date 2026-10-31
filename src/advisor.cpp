@@ -59,7 +59,7 @@ ModelInfo readModelInfo(const QString &path) {
     QMap<QString,QVariant> values;
     for (quint64 i=0; i<count && r.ok; ++i) {
         auto key=r.string(); quint32 type=0; r.stream>>type;
-        bool keep=key == "general.name" || key == "general.architecture" || key == "split.count" || key.endsWith(".context_length") || key.endsWith(".block_count") || key.endsWith(".embedding_length") || key.endsWith(".attention.head_count") || key.endsWith(".attention.head_count_kv");
+        bool keep=key == "general.name" || key == "general.architecture" || key == "split.count" || key.endsWith(".context_length") || key.endsWith(".block_count") || key.endsWith(".embedding_length") || key.endsWith(".attention.head_count") || key.endsWith(".attention.head_count_kv") || key.endsWith(".attention.key_length") || key.endsWith(".attention.value_length") || key.endsWith(".attention.sliding_window");
         if (key == "tokenizer.chat_template" && type == 8) info.hasChatTemplate=!r.string().trimmed().isEmpty();
         else { auto value=r.value(type,keep); if (keep) values[key]=value; }
     }
@@ -69,6 +69,7 @@ ModelInfo readModelInfo(const QString &path) {
     info.trainingContext=values.value(arch+"context_length").toLongLong(); info.layers=values.value(arch+"block_count").toLongLong();
     info.embedding=values.value(arch+"embedding_length").toLongLong(); info.heads=values.value(arch+"attention.head_count").toLongLong();
     info.kvHeads=values.value(arch+"attention.head_count_kv", QVariant::fromValue(info.heads)).toLongLong();
+    info.keyLength=values.value(arch+"attention.key_length").toLongLong();info.valueLength=values.value(arch+"attention.value_length").toLongLong();info.slidingWindow=values.value(arch+"attention.sliding_window").toLongLong();
     info.shards=qMax<qint64>(1,values.value("split.count",1).toLongLong()); return info;
 }
 QVector<DeviceInfo> parseDevices(const QString &output) {
@@ -123,9 +124,8 @@ Advice makeAdvice(const AdviceInput &in) {
     else out.notes<<"Чат: оставьте запас контекста для ответа, учитывайте системные инструкции и историю. Для изображений нужен совместимый проектор и дополнительная память.";
     out.notes<<QString("Контекст одного диалога: %1; слотов: %2; общий --ctx-size: %3. Сдвиг контекста отключён: клиент должен сокращать историю, когда окно заполнено.").arg(in.contextPerSlot).arg(in.slotCount).arg(out.totalContext);
     out.notes<<"Пакеты 512/128 — консервативная отправная точка. При нехватке памяти уменьшайте микропакет, затем контекст/число слотов; при достаточной памяти измеряйте скорость с большим пакетом.";
-    if (QStringList{"llama","qwen2","qwen3","mistral"}.contains(m.architecture) && m.layers>0 && m.layers<1000 && m.heads>0 && m.kvHeads>0 && m.kvHeads<=m.heads && m.embedding>0 && m.embedding<1000000 && m.embedding%m.heads==0) {
-        double bytes=in.cacheType=="f16" ? 2.0 : in.cacheType=="q8_0" ? 34.0/32 : 18.0/32;
-        out.estimatedKvMiB=2.0*m.layers*m.kvHeads*(m.embedding/m.heads)*out.totalContext*bytes/1048576;
+    out.estimatedKvMiB=estimateKvMiB(m,out.totalContext,in.cacheType);
+    if (out.estimatedKvMiB>=0) {
         out.notes<<QString("Грубая оценка KV-кэша по стандартному attention: %1 МиБ. Не включает вычислительные буферы, выравнивание, проектор и веса; окончательный размер смотрите в журнале.").arg(out.estimatedKvMiB,0,'f',0);
         if (!in.cpuOnly && m.shards==1 && m.fileBytes>0 && m.fileBytes/1048576.0+out.estimatedKvMiB>budget) out.warnings<<"Размер файла весов плюс оценка KV превышает доступный бюджет GPU. Возможна частичная выгрузка на CPU; уменьшите контекст/слоты или используйте более компактную модель. Это не точный расчёт VRAM.";
     } else out.notes<<"Оценка KV-кэша по архитектуре недоступна. Для гибридных, MLA и других нестандартных моделей используйте fit и фактический журнал памяти.";
