@@ -15,6 +15,18 @@ class GuiTest : public QObject {
     Q_OBJECT
     void answerExit(bool yes){QTimer::singleShot(0,qApp,[yes]{auto box=qobject_cast<QMessageBox*>(QApplication::activeModalWidget());QVERIFY(box);auto button=box->findChild<QPushButton*>(yes?"exitYes":"exitNo");QVERIFY(button);QTest::mouseClick(button,Qt::LeftButton,Qt::NoModifier,QPoint(2,button->height()/2));});}
 private slots:
+    void localVersionParsing_data(){
+        QTest::addColumn<QString>("output");QTest::addColumn<qint64>("build");QTest::addColumn<QString>("name");QTest::addColumn<QString>("commit");
+        QTest::newRow("modern")<<QString("version: 0.8.0-dev (build 12024, commit ddf48f85c)\r\nbuilt with MSVC 19.51.36246.0 for x64\r\n")<<qint64(12024)<<QString("0.8.0-dev")<<QString("ddf48f85c");
+        QTest::newRow("legacy")<<QString("version: 42 (fixture)\n")<<qint64(42)<<QString()<<QString();
+        QTest::newRow("legacy-tag")<<QString("version: b1234\n")<<qint64(1234)<<QString()<<QString();
+        QTest::newRow("build-line")<<QString("version: 0.8.0-dev\nbuild: 12025\n")<<qint64(12025)<<QString("0.8.0-dev")<<QString();
+        QTest::newRow("only-build")<<QString("build: 9876 (abcdef0)\n")<<qint64(9876)<<QString()<<QString();
+        QTest::newRow("no-build")<<QString("version: 0.8.0-dev\nbuilt with MSVC 19.51.36246.0 for x64\n")<<qint64(-1)<<QString("0.8.0-dev")<<QString();
+        QTest::newRow("compiler-only")<<QString("built with MSVC 19.51.36246.0 for x64\n")<<qint64(-1)<<QString()<<QString();
+        QTest::newRow("overflow")<<QString("version: 9999999999999999999999999999\n")<<qint64(-1)<<QString()<<QString();
+    }
+    void localVersionParsing(){QFETCH(QString,output);QFETCH(qint64,build);QFETCH(QString,name);QFETCH(QString,commit);auto parsed=parseLocalLlamaVersion(output);QCOMPARE(parsed.build,build);QCOMPARE(parsed.version,name);QCOMPARE(parsed.commit,commit);}
     void modelLibraryScanAndSelection(){
         QTemporaryDir dir;QVERIFY(QDir(dir.path()).mkdir("nested"));
         auto write=[&](const QString &path,int shard){QFile file(path);if(!file.open(QIODevice::WriteOnly))return false;QDataStream s(&file);s.setByteOrder(QDataStream::LittleEndian);auto string=[&](const QByteArray &v){s<<quint64(v.size());s.writeRawData(v.constData(),v.size());};s.writeRawData("GGUF",4);s<<quint32(3)<<quint64(0)<<quint64(7);for(const auto &p:QVector<QPair<QByteArray,QByteArray>>{{"general.name","Test model"},{"general.architecture","llama"},{"general.size_label","7B"}}){string(p.first);s<<quint32(8);string(p.second);}for(const auto &p:QVector<QPair<QByteArray,quint32>>{{"general.file_type",15},{"llama.context_length",32768},{"split.count",quint32(shard<0?1:2)},{"split.no",quint32(shard<0?0:shard)}}){string(p.first);s<<quint32(4)<<p.second;}return s.status()==QDataStream::Ok;};
@@ -89,7 +101,7 @@ private slots:
 #else
         QString ext;
 #endif
-        QVERIFY(QFile::copy(FIXTURE_PATH, dir.filePath("llama-server" + ext)));
+        const auto bin=dir.filePath("build/bin/Release");QVERIFY(QDir().mkpath(bin));const auto executable=QDir(bin).filePath("llama-server"+ext);QVERIFY(QFile::copy(FIXTURE_PATH,executable));
         QSignalSpy finished(&checker, &ReleaseChecker::checkingChanged);
         checker.check(dir.path()); checker.check(dir.path());
         QTRY_VERIFY(!checker.busy()); QCOMPARE(requests, 1); QCOMPARE(finished.size(), 2);
@@ -97,8 +109,13 @@ private slots:
         QCOMPARE(checker.releaseUrl().host(), QString("github.com"));
         payload = R"([{"tag_name":"b42","html_url":"https://github.com/ggml-org/llama.cpp/releases/tag/b42"}])";
         checker.check(dir.path()); QTRY_VERIFY(!checker.busy()); QVERIFY(checker.text().contains(QString::fromUtf8("обновлений нет")));
-        responseCode = 403; checker.check(dir.path()); QTRY_VERIFY(!checker.busy()); QVERIFY(checker.releaseUrl().isEmpty()); QVERIFY(checker.text().contains(QString::fromUtf8("Лимит")));
+        auto writeVersion=[&](int build){QFile output(QDir(bin).filePath("fixture-version.txt"));if(!output.open(QIODevice::WriteOnly|QIODevice::Truncate))return false;const auto bytes=QString("version: 0.8.0-dev (build %1, commit ddf48f85c)\nbuilt with MSVC 19.51.36246.0 for x64\n").arg(build).toUtf8();return output.write(bytes)==bytes.size();};
+        payload=R"([{"tag_name":"b12025","html_url":"https://github.com/ggml-org/llama.cpp/releases/tag/b12025"}])";QVERIFY(writeVersion(12024));QSignalSpy result(&checker,&ReleaseChecker::resultChanged);
+        checker.check(dir.path());QTRY_VERIFY(!checker.busy());QVERIFY(checker.text().contains("0.8.0-dev"));QVERIFY(checker.text().contains("b12024"));QVERIFY(checker.text().contains("b12025"));QVERIFY(checker.text().contains("ddf48f85c"));QVERIFY(result.last()[1].toString().contains("MSVC 19.51.36246.0 for x64"));
+        QVERIFY(writeVersion(12026));checker.check(dir.path());QTRY_VERIFY(!checker.busy());QVERIFY(checker.text().contains("b12026"));QVERIFY(checker.text().contains(QString::fromUtf8("обновлений нет")));
+        QVERIFY(writeVersion(12027));responseCode = 403; checker.check(dir.path()); QTRY_VERIFY(!checker.busy()); QVERIFY(checker.releaseUrl().isEmpty()); QVERIFY(checker.text().contains(QString::fromUtf8("Лимит")));QVERIFY(checker.text().contains("b12027"));
         responseCode = 200; payload = "invalid JSON"; checker.check(dir.path()); QTRY_VERIFY(!checker.busy()); QVERIFY(checker.releaseUrl().isEmpty());
+        QVERIFY(QFile::remove(executable));checker.check(dir.path());QTRY_VERIFY(!checker.busy());QVERIFY(!checker.text().contains("b12027"));QVERIFY(result.last()[1].toString().contains(QString::fromUtf8("не найден")));
     }
     void liveGitHubCheck() {
         if (!qEnvironmentVariableIsSet("STUDIO_LIVE_RELEASE_TEST")) QSKIP("Run explicitly to verify GitHub HTTPS");

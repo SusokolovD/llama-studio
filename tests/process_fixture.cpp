@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
         for(auto name:{"llama-server","llama-fit-params"}){QString path=QDir(dir).filePath(QString(name)+ext);QFile::remove(path);if(!QFile::copy(app.applicationFilePath(),path))return 45;}
         QFile dll(QDir(dir).filePath("zz-runtime.dll"));if(!dll.open(QIODevice::WriteOnly))return 46;dll.write("new runtime");return 0;
     }
-    if (args.contains("--version")) { printf("version: 42 (fixture)\n"); return 0; }
+    if (args.contains("--version")) {QFile output("fixture-version.txt");if(output.open(QIODevice::ReadOnly)){const auto bytes=output.readAll();fwrite(bytes.constData(),1,size_t(bytes.size()),stdout);}else printf("version: 42 (fixture)\n"); return 0; }
     if (args.contains("--list-devices")) { printf("Available devices:\n  CUDA0: Fixture A (24576 MiB, 22000 MiB free)\n  CUDA1: Fixture B (12288 MiB, 10000 MiB free)\n"); return 0; }
     int modelIndex = args.indexOf("--model");
     if (modelIndex < 0 || !QFileInfo::exists(args.value(modelIndex + 1))) return 41;
