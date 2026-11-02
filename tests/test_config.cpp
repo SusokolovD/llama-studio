@@ -1,6 +1,7 @@
 #include "config.h"
 #include "advisor.h"
 #include "hardwaremonitor.h"
+#include "modelperformance.h"
 #include <QtTest>
 #include <QFile>
 #include <QTemporaryDir>
@@ -11,6 +12,14 @@ class ConfigTest : public QObject {
         if (!c.load(f.readAll(), &e)) qFatal("%s", qPrintable(e)); return c;
     }
 private slots:
+    void modelTimingReportsAndLifecycle(){
+        const QString prefix="slot print_timings: id 0 | task 7 | ";auto report=parseModelTiming(prefix+"prompt eval time = 100.00 ms / 100 tokens (1.00 ms per token, 1000.00 tokens per second)");QCOMPARE(int(report.kind),int(TimingKind::Prompt));QCOMPARE(report.tokensPerSecond,1000.0);QCOMPARE(report.milliseconds,100.0);QVERIFY(report.task.contains("7"));
+        report=parseModelTiming("slot update_slots: id 0 | task 7 | n_gen = 123, tg = 49.00 t/s, tg_3s = 50.00 t/s");QCOMPARE(int(report.kind),int(TimingKind::Generation));QCOMPARE(report.tokensPerSecond,50.0);QVERIFY(report.live);
+        report=parseModelTiming("prompt processing, n_tokens = 1000, progress = 0.50, t = 3.00 s / 333.33 tokens per second");QCOMPARE(int(report.kind),int(TimingKind::Prompt));QCOMPARE(report.tokensPerSecond,333.33);QVERIFY(report.live);QCOMPARE(int(parseModelTiming("prompt eval time = 0 ms / 0 tokens (nan ms per token, inf tokens per second)").kind),int(TimingKind::None));
+        ModelPerformance stats;stats.start("A.gguf");stats.readLine(prefix+"prompt eval time = 100.00 ms / 100 tokens (1.00 ms per token, 1000.00 tokens per second)");stats.readLine("slot print_timings: id 1 | task 8 | eval time = 100.00 ms / 2 tokens (50.00 ms per token, 20.00 tokens per second)");QCOMPARE(stats.snapshot().promptSpeed,-1.0);QCOMPARE(stats.snapshot().generationSpeed,20.0);
+        stats.readLine(prefix+"eval time = 200.00 ms / 10 tokens (20.00 ms per token, 50.00 tokens per second)");QCOMPARE(stats.snapshot().promptSpeed,1000.0);QCOMPARE(stats.snapshot().generationSpeed,50.0);stats.readLine(prefix+"total time = 300.00 ms / 110 tokens");QCOMPARE(stats.snapshot().requestMs,300.0);
+        QTest::qWait(20);stats.stop();const auto stopped=stats.snapshot().uptimeMs;QVERIFY(stopped>0);QTest::qWait(20);QCOMPARE(stats.snapshot().uptimeMs,stopped);QVERIFY(!stats.snapshot().running);stats.start("B.gguf");QCOMPARE(stats.snapshot().model,QString("B.gguf"));QCOMPARE(stats.snapshot().promptSpeed,-1.0);QCOMPARE(stats.snapshot().generationSpeed,-1.0);QVERIFY(stats.snapshot().task.isEmpty());
+    }
     void monitoringReadings(){
         auto rows=parseNvidiaReadings("GPU-a, \"GPU, one\", 52, 75, 4096, 8192, 120.5, 0\nGPU-b, GPU two, N/A, [Not Supported], 2000, 12000, N/A, N/A\ninvalid\n");
         QCOMPARE(rows.size(),2);QCOMPARE(rows[0].name,QString("GPU, one"));QCOMPARE(rows[0].temperature,52.0);QCOMPARE(rows[0].fan,0.0);QCOMPARE(rows[1].temperature,-1.0);QCOMPARE(rows[1].load,-1.0);

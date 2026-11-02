@@ -39,13 +39,14 @@ MainWindow::MainWindow(QWidget *parent, bool checkUpdatesOnStartup) : QMainWindo
     connect(&server, &QProcess::started, this, [this] { status->setText("Загрузка модели…"); healthTimer.start(); updateButtons(); });
     connect(&server, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, [this](int code, QProcess::ExitStatus exit) {
         healthTimer.stop(); readLog(server, true, serverPending, true); readLog(server, false, serverErrorPending, true);
+        performance.stop();
         status->setText(stopping ? "Сервер остановлен" : (code == 0 && exit == QProcess::NormalExit ? "Сервер завершён" : "Ошибка сервера"));
         log(QString("\n[Сервер завершён: код %1, %2]\n").arg(code).arg(exit == QProcess::CrashExit ? "аварийный выход" : "обычный выход"));
         updateButtons();
     });
     connect(&server, &QProcess::errorOccurred, this, [this](QProcess::ProcessError e) {
         log("\n[Ошибка процесса] " + server.errorString() + "\n");
-        if (e == QProcess::FailedToStart) { healthTimer.stop(); status->setText("Ошибка запуска"); updateButtons(); }
+        if (e == QProcess::FailedToStart) {performance.stop();healthTimer.stop(); status->setText("Ошибка запуска"); updateButtons(); }
     });
     connect(&fit, &QProcess::readyReadStandardOutput, this, [this] { readLog(fit, true, fitPending); });
     connect(&fit, &QProcess::readyReadStandardError, this, [this] { readLog(fit, false, fitErrorPending); });
@@ -237,8 +238,8 @@ void MainWindow::readLog(QProcess &process, bool out, QByteArray &pending, bool 
         else { fitCanceled = true; stop(fit); log("\n[Слишком большой вывод fit; подбор отменён]\n"); }
     }
     pending += data; int end;
-    while ((end = pending.indexOf('\n')) >= 0) { log(QString::fromUtf8(pending.left(end + 1))); pending.remove(0, end + 1); }
-    if (finish || pending.size() > 65536) { log(QString::fromUtf8(pending)); pending.clear(); }
+    while ((end = pending.indexOf('\n')) >= 0) {auto line=QString::fromUtf8(pending.left(end+1));if(&process==&server)performance.readLine(line);log(line);pending.remove(0,end+1);}
+    if (finish || pending.size() > 65536) {auto line=QString::fromUtf8(pending);if(&process==&server)performance.readLine(line);log(line);pending.clear();}
 }
 void MainWindow::loadFile(bool catalog) {
     if (fit.state() != QProcess::NotRunning||buildPage->busy()) { error("Дождитесь завершения подбора/сборки или отмените их."); return; }
@@ -285,7 +286,7 @@ void MainWindow::showModels(){
 }
 void MainWindow::showMonitor(){
     if(auto existing=findChild<MonitorDialog*>("hardwareMonitorWindow")){existing->showNormal();existing->raise();existing->activateWindow();return;}
-    auto dialog=new MonitorDialog(this);dialog->setAttribute(Qt::WA_DeleteOnClose);dialog->show();
+    auto dialog=new MonitorDialog(this,&performance);dialog->setAttribute(Qt::WA_DeleteOnClose);dialog->show();
 }
 bool MainWindow::validateModel() {
     auto p = config.find("--model");
@@ -310,6 +311,7 @@ void MainWindow::launchServer() {
     args = exe.prefix + args; runningUrl = endpoint(); runningKey.clear();
     if (auto key = config.find("--api-key")) if (key->enabled) runningKey = key->value.toString().section(',', 0, 0).toUtf8();
     runningCommand->setPlainText(Config::displayCommand(exe.path, args)); tabs->setCurrentIndex(1); serverPending.clear(); serverErrorPending.clear(); stopping = false; ++serverRun;
+    QString modelName="llama.cpp";if(router)modelName="Router llama.cpp";else if(auto p=config.find("--model")){if(p->enabled)modelName=QFileInfo(p->value.toString()).fileName();}if(remote)modelName="Удалённая модель llama.cpp";performance.start(modelName);
     server.setWorkingDirectory(QFileInfo(exe.path).absolutePath()); server.setProgram(exe.path); server.setArguments(args); status->setText("Запуск сервера…"); log("\n[Запуск сервера]\n"); server.start(); updateButtons();
 }
 void MainWindow::launchFit() {

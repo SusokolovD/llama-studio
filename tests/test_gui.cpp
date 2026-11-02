@@ -37,10 +37,11 @@ private slots:
     }
     void monitorWindowLifecycle(){
         MainWindow window(nullptr,false);window.show();window.showMonitor();auto dialog=window.findChild<MonitorDialog*>("hardwareMonitorWindow");QVERIFY(dialog);window.showMonitor();QCOMPARE(window.findChildren<MonitorDialog*>().size(),1);
+        window.performance.start("test-model.gguf");window.performance.readLine("slot print_timings: id 0 | task 7 | prompt eval time = 100.00 ms / 100 tokens (1.00 ms per token, 1000.00 tokens per second)");window.performance.readLine("slot print_timings: id 0 | task 7 | eval time = 200.00 ms / 10 tokens (20.00 ms per token, 50.00 tokens per second)");window.performance.readLine("slot print_timings: id 0 | task 7 | total time = 300.00 ms / 110 tokens");QCOMPARE(dialog->findChild<QLabel*>("monitorModel")->text(),QString("test-model.gguf"));int speeds=0;for(auto value:dialog->findChildren<QLabel*>("monitorSpeed")){if(value->property("metric")=="prefill")QVERIFY(value->text().contains("1000.0"));else QVERIFY(value->text().contains("50.0"));++speeds;}QCOMPARE(speeds,2);
 #ifdef Q_OS_WIN
         QTRY_VERIFY_WITH_TIMEOUT(dialog->findChild<QProgressBar*>("monitorCpu")->isEnabled(),6000);QVERIFY(dialog->findChild<QProgressBar*>("monitorRam")->isEnabled());
 #endif
-        if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR"))dialog->grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/monitor-preview.png");dialog->close();QTRY_VERIFY(window.findChild<MonitorDialog*>("hardwareMonitorWindow")==nullptr);answerExit(true);window.close();
+        QVERIFY(dialog->width()<=400);if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR"))dialog->grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/monitor-preview.png");dialog->close();QTRY_VERIFY(window.findChild<MonitorDialog*>("hardwareMonitorWindow")==nullptr);window.showMonitor();auto reopened=window.findChild<MonitorDialog*>("hardwareMonitorWindow");QVERIFY(reopened);QCOMPARE(reopened->findChild<QLabel*>("monitorModel")->text(),QString("test-model.gguf"));window.performance.stop();QVERIFY(reopened->findChild<QLabel*>("monitorUptime")->text().contains(QString::fromUtf8("Остановлен")));answerExit(true);window.close();
     }
     void initTestCase() {
         QApplication::setStyle("Fusion");QFile style(":/style.qss");if(style.open(QIODevice::ReadOnly))qApp->setStyleSheet(QString::fromUtf8(style.readAll()));
@@ -165,6 +166,7 @@ private slots:
         QCOMPARE(w.context->minimum(),0);w.context->setValue(0);w.launchFit();QTRY_COMPARE(w.fit.state(),QProcess::NotRunning);QCOMPARE(w.config.find("--ctx-size")->value.toInt(),32768);QCOMPARE(w.config.fitContext,0);
         w.launchServer(); QTRY_COMPARE(w.server.state(), QProcess::Running);
         QTRY_VERIFY(w.status->text().contains(QString::fromUtf8("Сервер готов")));
+        QTRY_COMPARE(w.performance.snapshot().promptSpeed,1000.0);QCOMPARE(w.performance.snapshot().generationSpeed,50.0);
         answerExit(false);QVERIFY(!w.close());QCOMPARE(w.server.state(),QProcess::Running);
         QVERIFY(w.runningCommand->toPlainText().contains(model.fileName().replace('/', QDir::separator())) || w.runningCommand->toPlainText().contains(model.fileName()));
         w.stopping = true; w.stop(w.server); QTRY_COMPARE(w.server.state(), QProcess::NotRunning);

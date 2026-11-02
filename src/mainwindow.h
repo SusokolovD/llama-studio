@@ -2,6 +2,7 @@
 #include "config.h"
 #include "releasechecker.h"
 #include "managedprocess.h"
+#include "modelperformance.h"
 #include <QMainWindow>
 #include <QProcess>
 #include <QNetworkAccessManager>
@@ -27,6 +28,7 @@ private:
     friend class GuiTest;
     Config config;
     ManagedProcess server, fit;
+    ModelPerformance performance;
     QNetworkAccessManager network;
     ReleaseChecker releases;
     QTimer healthTimer;

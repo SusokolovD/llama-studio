@@ -50,5 +50,7 @@ int main(int argc, char **argv) {
     });
     if (!server.listen(QHostAddress::LocalHost, args.value(args.indexOf("--port") + 1).toUShort())) return 43;
     fprintf(stderr, "fixture server ready\n"); fflush(stderr);
+    QTimer::singleShot(100,[]{fprintf(stderr,"slot print_timings: id 0 | task 7 | prompt eval time = 100.00 ms / 100 tokens (1.00 ms per token, ");fflush(stderr);});
+    QTimer::singleShot(150,[]{fprintf(stderr,"1000.00 tokens per second)\nslot print_timings: id 0 | task 7 | eval time = 200.00 ms / 10 tokens (20.00 ms per token, 50.00 tokens per second)\n");fflush(stderr);});
     return app.exec();
 }
