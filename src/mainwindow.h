@@ -55,6 +55,8 @@ private:
     void saveFile();
     void reset();
     void showAdvisor();
+    void showModels();
+    void showMonitor();
     void launchServer();
     void launchFit();
     void stop(QProcess &process);

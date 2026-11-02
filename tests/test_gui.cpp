@@ -3,6 +3,8 @@
 #include "builderpage.h"
 #include "version.h"
 #include "studiobutton.h"
+#include "modellibrary.h"
+#include "monitordialog.h"
 #include <QtTest>
 #include <QtWidgets>
 #include <QTcpServer>
@@ -13,6 +15,21 @@ class GuiTest : public QObject {
     Q_OBJECT
     void answerExit(bool yes){QTimer::singleShot(0,qApp,[yes]{auto box=qobject_cast<QMessageBox*>(QApplication::activeModalWidget());QVERIFY(box);auto button=box->findChild<QPushButton*>(yes?"exitYes":"exitNo");QVERIFY(button);QTest::mouseClick(button,Qt::LeftButton,Qt::NoModifier,QPoint(2,button->height()/2));});}
 private slots:
+    void modelLibraryScanAndSelection(){
+        QTemporaryDir dir;QVERIFY(QDir(dir.path()).mkdir("nested"));
+        auto write=[&](const QString &path,int shard){QFile file(path);if(!file.open(QIODevice::WriteOnly))return false;QDataStream s(&file);s.setByteOrder(QDataStream::LittleEndian);auto string=[&](const QByteArray &v){s<<quint64(v.size());s.writeRawData(v.constData(),v.size());};s.writeRawData("GGUF",4);s<<quint32(3)<<quint64(0)<<quint64(7);for(const auto &p:QVector<QPair<QByteArray,QByteArray>>{{"general.name","Test model"},{"general.architecture","llama"},{"general.size_label","7B"}}){string(p.first);s<<quint32(8);string(p.second);}for(const auto &p:QVector<QPair<QByteArray,quint32>>{{"general.file_type",15},{"llama.context_length",32768},{"split.count",quint32(shard<0?1:2)},{"split.no",quint32(shard<0?0:shard)}}){string(p.first);s<<quint32(4)<<p.second;}return s.status()==QDataStream::Ok;};
+        QVERIFY(write(dir.filePath("model.gguf"),-1));const auto first=dir.filePath("nested/model-00001-of-00002.GGUF");QVERIFY(write(first,0));QVERIFY(write(dir.filePath("nested/model-00002-of-00002.GGUF"),1));QFile bad(dir.filePath("broken.gguf"));QVERIFY(bad.open(QIODevice::WriteOnly));bad.write("bad");bad.close();
+        ModelLibraryDialog dialog(dir.path());dialog.show();auto table=dialog.findChild<QTableWidget*>("modelLibraryTable");QVERIFY(table);QTRY_COMPARE(table->rowCount(),4);QTRY_VERIFY(dialog.findChild<QLabel*>("modelLibraryStatus")->text().contains(QString::fromUtf8("завершено")));
+        auto filter=dialog.findChild<QLineEdit*>("modelLibraryFilter");filter->setText("Q4_K_M");int visible=0,selected=-1;for(int r=0;r<table->rowCount();++r){if(!table->isRowHidden(r))++visible;if(table->item(r,0)->text().contains("00002-of"))selected=r;}QCOMPARE(visible,3);QVERIFY(selected>=0);table->selectRow(selected);QSignalSpy choice(&dialog,&ModelLibraryDialog::modelSelected);auto use=dialog.findChild<QComboBox*>();QVERIFY(use);use->setCurrentIndex(2);for(auto button:dialog.findChildren<QPushButton*>())if(button->text()==QString::fromUtf8("Использовать выбранную"))button->click();QCOMPARE(choice.size(),1);QCOMPARE(choice[0][0].toString(),first);QCOMPARE(choice[0][1].toString(),QString("--spec-draft-model"));
+        if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR"))dialog.grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/models-preview.png");dialog.close();
+    }
+    void monitorWindowLifecycle(){
+        MainWindow window(nullptr,false);window.show();window.showMonitor();auto dialog=window.findChild<MonitorDialog*>("hardwareMonitorWindow");QVERIFY(dialog);window.showMonitor();QCOMPARE(window.findChildren<MonitorDialog*>().size(),1);
+#ifdef Q_OS_WIN
+        QTRY_VERIFY_WITH_TIMEOUT(dialog->findChild<QProgressBar*>("monitorCpu")->isEnabled(),6000);QVERIFY(dialog->findChild<QProgressBar*>("monitorRam")->isEnabled());
+#endif
+        if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR"))dialog->grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/monitor-preview.png");dialog->close();QTRY_VERIFY(window.findChild<MonitorDialog*>("hardwareMonitorWindow")==nullptr);answerExit(true);window.close();
+    }
     void initTestCase() {
         QApplication::setStyle("Fusion");QFile style(":/style.qss");if(style.open(QIODevice::ReadOnly))qApp->setStyleSheet(QString::fromUtf8(style.readAll()));
     }
@@ -91,11 +108,13 @@ private slots:
         QVERIFY2(!checker.releaseUrl().isEmpty(), qPrintable(checker.text()));
     }
     void sslRuntimeAvailable() {
-#ifndef STUDIO_STATIC_OPENSSL
-        QSKIP("Static OpenSSL validation applies to the fully static build");
+#ifndef STUDIO_STATIC_TLS
+        QSKIP("TLS validation applies to the fully static build");
 #else
         QVERIFY(QSslSocket::supportsSsl());
+#ifdef STUDIO_STATIC_OPENSSL
         QVERIFY(!QSslSocket::sslLibraryVersionString().isEmpty());
+#endif
         qInfo() << "TLS runtime:" << QSslSocket::sslLibraryVersionString();
 #endif
     }

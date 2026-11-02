@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "advisordialog.h"
 #include "builderpage.h"
+#include "modellibrary.h"
+#include "monitordialog.h"
 #include "version.h"
 #include "studiobutton.h"
 #include <QtWidgets>
@@ -82,6 +84,8 @@ void MainWindow::buildUi() {
     connect(button("Сбросить", toolbar), &QPushButton::clicked, this, &MainWindow::reset);
     connect(button("Помощник настройки", toolbar), &QPushButton::clicked, this, &MainWindow::showAdvisor); toolbar->addStretch(); main->addLayout(toolbar);
     auto updates = new QHBoxLayout;
+    connect(button("Каталог моделей",updates,"modelLibraryButton"),&QPushButton::clicked,this,&MainWindow::showModels);
+    connect(button("Мониторинг",updates,"hardwareMonitorButton"),&QPushButton::clicked,this,&MainWindow::showMonitor);
     auto releaseStatus = new QLabel("llama.cpp: релизы GitHub"); releaseStatus->setObjectName("subtitle"); releaseStatus->setWordWrap(true); releaseStatus->setTextFormat(Qt::PlainText); updates->addWidget(releaseStatus, 1);
     auto checkReleases = button("Проверить обновления", updates);
     auto openRelease = button("Открыть релиз", updates); openRelease->setEnabled(false);
@@ -269,6 +273,20 @@ void MainWindow::showAdvisor() {
     context->setValue(config.fitContext);rebuild();updatePreview();
     if(dialog.runFit)launchFit();
 }
+void MainWindow::showModels(){
+    if(auto existing=findChild<ModelLibraryDialog*>("modelLibraryWindow")){existing->showNormal();existing->raise();existing->activateWindow();return;}
+    QSettings preferences;auto folder=config.metadata.value("modelLibraryDirectory").toString(preferences.value("modelLibraryDirectory").toString());
+    auto dialog=new ModelLibraryDialog(folder,this);dialog->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dialog,&ModelLibraryDialog::directoryChanged,this,[this](const QString &path){config.metadata["modelLibraryDirectory"]=path;QSettings().setValue("modelLibraryDirectory",path);});
+    connect(dialog,&ModelLibraryDialog::modelSelected,this,[this,dialog](const QString &path,const QString &name){
+        if(server.state()!=QProcess::NotRunning||fit.state()!=QProcess::NotRunning||buildPage->busy()){QMessageBox::information(dialog,"Выбор модели","Остановите сервер и дождитесь завершения fit/сборки перед сменой модели.");return;}
+        if(auto p=config.find(name)){p->value=path;p->enabled=true;navigation->setCurrentRow(1);rebuild();updatePreview();status->setText("Выбрано "+name+": "+QFileInfo(path).fileName());}
+    });dialog->show();
+}
+void MainWindow::showMonitor(){
+    if(auto existing=findChild<MonitorDialog*>("hardwareMonitorWindow")){existing->showNormal();existing->raise();existing->activateWindow();return;}
+    auto dialog=new MonitorDialog(this);dialog->setAttribute(Qt::WA_DeleteOnClose);dialog->show();
+}
 bool MainWindow::validateModel() {
     auto p = config.find("--model");
     if (!p || !p->enabled || !QFileInfo(p->value.toString()).isFile()) { error("В разделе «Модели и адаптеры» включите --model и выберите существующий GGUF-файл."); return false; }
@@ -343,6 +361,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
         server.killTree();fit.killTree();event->ignore();QTimer::singleShot(50,this,&QWidget::close);return;
     }
     server.killTree();fit.killTree();
+    for(auto dialog:findChildren<QDialog*>(QString(),Qt::FindDirectChildrenOnly))dialog->close();
     event->accept();
 }
 bool MainWindow::smokeTest(const QString &screenshot) {

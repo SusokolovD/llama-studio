@@ -1,5 +1,6 @@
 #include "config.h"
 #include "advisor.h"
+#include "hardwaremonitor.h"
 #include <QtTest>
 #include <QFile>
 #include <QTemporaryDir>
@@ -10,6 +11,11 @@ class ConfigTest : public QObject {
         if (!c.load(f.readAll(), &e)) qFatal("%s", qPrintable(e)); return c;
     }
 private slots:
+    void monitoringReadings(){
+        auto rows=parseNvidiaReadings("GPU-a, \"GPU, one\", 52, 75, 4096, 8192, 120.5, 0\nGPU-b, GPU two, N/A, [Not Supported], 2000, 12000, N/A, N/A\ninvalid\n");
+        QCOMPARE(rows.size(),2);QCOMPARE(rows[0].name,QString("GPU, one"));QCOMPARE(rows[0].temperature,52.0);QCOMPARE(rows[0].fan,0.0);QCOMPARE(rows[1].temperature,-1.0);QCOMPARE(rows[1].load,-1.0);
+        QVERIFY(parseNvidiaReadings("GPU-a, broken, nan, 101, -2, 100, inf, 200")[0].load<0);QCOMPARE(modelQuantization(15),QString("Q4_K_M"));QVERIFY(modelQuantization(999).contains("999"));QCOMPARE(modelQuantization(-1),QString::fromUtf8("Не указано"));
+    }
     void zeroFitContextRoundTrip(){
         auto c=catalog();c.fitContext=0;Config restored;QString error;QVERIFY2(restored.load(c.save(),&error),qPrintable(error));QCOMPARE(restored.fitContext,0);
         c.fitContext=-1;QVERIFY(!restored.load(c.save(),&error));QCOMPARE(restored.fitContext,0);
@@ -29,12 +35,13 @@ private slots:
     void ggufMetadataAndInvalidInput() {
         QTemporaryDir dir;QFile f(dir.filePath("tiny.gguf"));QVERIFY(f.open(QIODevice::WriteOnly));QDataStream s(&f);s.setByteOrder(QDataStream::LittleEndian);
         auto string=[&](const QByteArray &v){s<<quint64(v.size());s.writeRawData(v.constData(),v.size());};
-        s.writeRawData("GGUF",4);s<<quint32(3)<<quint64(0)<<quint64(12);
+        s.writeRawData("GGUF",4);s<<quint32(3)<<quint64(0)<<quint64(14);
         for(const auto &pair:QVector<QPair<QByteArray,QByteArray>>{{"general.architecture","llama"},{"general.name","test model"},{"tokenizer.chat_template","{{ messages }}"}}){string(pair.first);s<<quint32(8);string(pair.second);}
         string("tokenizer.ggml.tokens");s<<quint32(9)<<quint32(8)<<quint64(2);string("token A");string("token B");
         for(const auto &pair:QVector<QPair<QByteArray,quint32>>{{"llama.context_length",32768},{"llama.block_count",32},{"llama.embedding_length",4096},{"llama.attention.head_count",32},{"llama.attention.head_count_kv",8}}){string(pair.first);s<<quint32(4)<<pair.second;}
         for(const auto &pair:QVector<QPair<QByteArray,quint32>>{{"llama.attention.key_length",64},{"llama.attention.value_length",128},{"llama.attention.sliding_window",0}}){string(pair.first);s<<quint32(4)<<pair.second;}
-        f.close();auto info=readModelInfo(f.fileName());QVERIFY2(info.error.isEmpty(),qPrintable(info.error));QCOMPARE(info.trainingContext,qint64(32768));QCOMPARE(info.layers,qint64(32));QVERIFY(info.hasChatTemplate);QCOMPARE(info.keyLength,qint64(64));QCOMPARE(info.valueLength,qint64(128));
+        string("general.file_type");s<<quint32(4)<<quint32(15);string("general.size_label");s<<quint32(8);string("7B");
+        f.close();auto info=readModelInfo(f.fileName());QVERIFY2(info.error.isEmpty(),qPrintable(info.error));QCOMPARE(info.trainingContext,qint64(32768));QCOMPARE(info.layers,qint64(32));QVERIFY(info.hasChatTemplate);QCOMPARE(info.keyLength,qint64(64));QCOMPARE(info.valueLength,qint64(128));QCOMPARE(info.fileType,qint64(15));QCOMPARE(info.sizeLabel,QString("7B"));
         AdviceInput input;input.model=info;input.agent=true;input.contextPerSlot=16384;input.slotCount=2;input.devices={{"CUDA0","A",24000,24000},{"CUDA1","B",12000,12000}};
         auto advice=makeAdvice(input);QVERIFY(advice.error.isEmpty());QCOMPARE(advice.totalContext,32768);QVERIFY(advice.estimatedKvMiB>0);
         auto c=catalog();QString error;QVERIFY2(advice.apply(&c,&error),qPrintable(error));QCOMPARE(c.find("--device")->value.toString(),QString("CUDA0,CUDA1"));QCOMPARE(c.find("--split-mode")->value.toString(),QString("layer"));QVERIFY(!c.find("--tensor-split")->enabled);QCOMPARE(c.fitContext,32768);QVERIFY(!c.find("--agent")->enabled);QVERIFY(!c.find("--temp")->enabled);

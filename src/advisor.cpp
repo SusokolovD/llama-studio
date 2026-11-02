@@ -59,18 +59,26 @@ ModelInfo readModelInfo(const QString &path) {
     QMap<QString,QVariant> values;
     for (quint64 i=0; i<count && r.ok; ++i) {
         auto key=r.string(); quint32 type=0; r.stream>>type;
-        bool keep=key == "general.name" || key == "general.architecture" || key == "split.count" || key.endsWith(".context_length") || key.endsWith(".block_count") || key.endsWith(".embedding_length") || key.endsWith(".attention.head_count") || key.endsWith(".attention.head_count_kv") || key.endsWith(".attention.key_length") || key.endsWith(".attention.value_length") || key.endsWith(".attention.sliding_window");
+        bool keep=key == "general.name" || key == "general.architecture" || key == "general.file_type" || key == "general.size_label" || key == "general.type" || key == "split.count" || key == "split.no" || key.endsWith(".context_length") || key.endsWith(".block_count") || key.endsWith(".embedding_length") || key.endsWith(".attention.head_count") || key.endsWith(".attention.head_count_kv") || key.endsWith(".attention.key_length") || key.endsWith(".attention.value_length") || key.endsWith(".attention.sliding_window");
         if (key == "tokenizer.chat_template" && type == 8) info.hasChatTemplate=!r.string().trimmed().isEmpty();
-        else { auto value=r.value(type,keep); if (keep) values[key]=value; }
+        else { auto value=r.value(type,keep); if (keep && (key!="general.file_type" || type==4)) values[key]=value; }
     }
     if (!r.ok || r.stream.status()!=QDataStream::Ok) { info.error = "Метаданные GGUF повреждены или превышают безопасные пределы чтения."; return info; }
     info.name=values.value("general.name").toString(); info.architecture=values.value("general.architecture").toString();
+    info.fileType=values.value("general.file_type",-1).toLongLong();info.sizeLabel=values.value("general.size_label").toString();info.modelType=values.value("general.type").toString();info.shardIndex=values.value("split.no",0).toLongLong();
     auto arch=info.architecture + ".";
     info.trainingContext=values.value(arch+"context_length").toLongLong(); info.layers=values.value(arch+"block_count").toLongLong();
     info.embedding=values.value(arch+"embedding_length").toLongLong(); info.heads=values.value(arch+"attention.head_count").toLongLong();
     info.kvHeads=values.value(arch+"attention.head_count_kv", QVariant::fromValue(info.heads)).toLongLong();
     info.keyLength=values.value(arch+"attention.key_length").toLongLong();info.valueLength=values.value(arch+"attention.value_length").toLongLong();info.slidingWindow=values.value(arch+"attention.sliding_window").toLongLong();
-    info.shards=qMax<qint64>(1,values.value("split.count",1).toLongLong()); return info;
+    info.shards=values.value("split.count",1).toLongLong();
+    if(info.shards<1||info.shardIndex<0||info.shardIndex>=info.shards)info.error="Некорректные номера частей GGUF (split.no / split.count).";
+    return info;
+}
+QString modelQuantization(qint64 type){
+    // general.file_type is a model-level llama_ftype, not a per-tensor ggml_type.
+    static const QMap<qint64,QString> names={{0,"F32"},{1,"F16"},{2,"Q4_0"},{3,"Q4_1"},{7,"Q8_0"},{8,"Q5_0"},{9,"Q5_1"},{10,"Q2_K"},{11,"Q3_K_S"},{12,"Q3_K_M"},{13,"Q3_K_L"},{14,"Q4_K_S"},{15,"Q4_K_M"},{16,"Q5_K_S"},{17,"Q5_K_M"},{18,"Q6_K"},{19,"IQ2_XXS"},{20,"IQ2_XS"},{21,"Q2_K_S"},{22,"IQ3_XS"},{23,"IQ3_XXS"},{24,"IQ1_S"},{25,"IQ4_NL"},{26,"IQ3_S"},{27,"IQ3_M"},{28,"IQ2_S"},{29,"IQ2_M"},{30,"IQ4_XS"},{31,"IQ1_M"},{32,"BF16"},{36,"TQ1_0"},{37,"TQ2_0"},{38,"MXFP4_MOE"},{39,"NVFP4"},{40,"Q1_0"},{41,"Q2_0"},{42,"F8_E4M3"}};
+    if(type<0)return "Не указано";return names.value(type,QString("Неизвестно (ID %1)").arg(type));
 }
 QVector<DeviceInfo> parseDevices(const QString &output) {
     QVector<DeviceInfo> devices; QSet<QString> ids;
