@@ -6,6 +6,18 @@
 
 В обычном Windows PowerShell или Developer PowerShell:
 
+Статическая MSVC-сборка настраивается непосредственно в `CMakeLists.txt` опцией `LLAMA_STUDIO_STATIC_MSVC` (по умолчанию ON для MSVC). Она включает `LLAMA_STUDIO_STATIC_QT`, задаёт `/MT` для Release и `/MTd` для Debug. Внутренние библиотеки приложения также собираются статическими. Путь к подходящей Qt передаётся через `CMAKE_PREFIX_PATH`:
+
+```powershell
+cmake -S . -B build-msvc2026-static -G "Visual Studio 18 2026" -A x64 -DCMAKE_PREFIX_PATH=C:/Qt/msvc2026-static -DLLAMA_STUDIO_STATIC_MSVC=ON
+cmake --build build-msvc2026-static --config Release --parallel 4
+ctest --test-dir build-msvc2026-static -C Release --output-on-failure
+```
+
+Для динамической MSVC-сборки задайте `-DLLAMA_STUDIO_STATIC_MSVC=OFF -DLLAMA_STUDIO_STATIC_QT=OFF -DLLAMA_STUDIO_MSVC_RUNTIME=MultiThreadedDLL`. Runtime выбирается корректно для обеих конфигураций: `/MD` и `/MDd`. Qt должна использовать такой же runtime.
+
+Скрипт сборки и упаковки использует тот же режим CMake:
+
 ```powershell
 .\tools\build-static-msvc2026.ps1 -QtRoot 'C:\Qt\msvc2026-static'
 ```

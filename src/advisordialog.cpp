@@ -1,5 +1,7 @@
 #include "studiobutton.h"
 #include "advisordialog.h"
+#include "modelcache.h"
+#include "modelpicker.h"
 #include <QtWidgets>
 AdvisorDialog::AdvisorDialog(const Config &config,QWidget *parent):QDialog(parent),config(config) {
     setWindowTitle("Помощник настройки модели"); resize(1280,880); setMinimumSize(980,700);
@@ -11,8 +13,8 @@ AdvisorDialog::AdvisorDialog(const Config &config,QWidget *parent):QDialog(paren
     if(auto p=config.find("--model"))path->setText(p->value.toString());
     path->setPlaceholderText("Файл GGUF для анализа метаданных"); modelRow->addWidget(path,1);
     auto browse=new StudioButton("…"); modelRow->addWidget(browse); left->addLayout(modelRow);
-    connect(browse,&QPushButton::clicked,this,[this]{auto p=QFileDialog::getOpenFileName(this,"Модель GGUF",path->text(),"GGUF (*.gguf);;Все файлы (*)");if(!p.isEmpty()){path->setText(p);inspectModel();}});
-    auto inspect=new StudioButton("Прочитать метаданные GGUF"); left->addWidget(inspect); connect(inspect,&QPushButton::clicked,this,&AdvisorDialog::inspectModel);
+    connect(browse,&QPushButton::clicked,this,[this]{auto p=ModelPickerDialog::choose(this,"Модель для помощника",path->text());if(!p.isEmpty()){path->setText(p);inspectModel();}});
+    auto inspect=new StudioButton("Перечитать метаданные GGUF"); left->addWidget(inspect); connect(inspect,&QPushButton::clicked,this,[this]{inspectModel(true);});
     modelLabel=new QLabel("Считываются только метаданные, веса не загружаются в RAM/GPU."); modelLabel->setWordWrap(true); modelLabel->setTextFormat(Qt::PlainText); left->addWidget(modelLabel);
     auto form=new QFormLayout; mode=new QComboBox; mode->addItems({"Чат и диалоги","Агентское программирование"});mode->setCurrentIndex(saved.value("mode").toInt(0)); form->addRow("Задача",mode);
     context=new QSpinBox;context->setObjectName("advisorContext"); context->setRange(1,1048576); context->setSingleStep(1024); context->setValue(saved.value("contextPerSlot").toInt(8192)); form->addRow("Токенов на диалог",context);
@@ -64,8 +66,8 @@ AdvisorDialog::~AdvisorDialog(){if(detector.state()!=QProcess::NotRunning){detec
 QJsonObject AdvisorDialog::options() const {
     return {{"mode",mode->currentIndex()},{"contextPerSlot",context->value()},{"slots",slotCount->value()},{"reserveMiB",reserve->value()},{"cacheType",cache->currentData().toString()},{"sampling",sampling->currentIndex()},{"cpuOnly",cpu->isChecked()}};
 }
-void AdvisorDialog::inspectModel(){
-    model=readModelInfo(path->text());
+void AdvisorDialog::inspectModel(bool force){
+    QString cacheError;model=cachedModelInfo(path->text(),force,&cacheError);modelLabel->setToolTip("JSON-кэш: "+ModelCache::defaultPath()+(cacheError.isEmpty()?QString():"\n"+cacheError));
     if(!model.error.isEmpty())modelLabel->setText(model.error);
     else modelLabel->setText(QString("%1\nАрхитектура: %2; контекст обучения: %3; частей: %4; шаблон чата: %5. Размер выбранного файла: %6 ГиБ.").arg(model.name,model.architecture).arg(model.trainingContext).arg(model.shards).arg(model.hasChatTemplate?"есть":"не найден").arg(model.fileBytes/1073741824.0,0,'f',2));
     if(model.trainingContext>0 && context->value()>model.trainingContext)context->setValue(int(qMin<qint64>(model.trainingContext,1048576)));

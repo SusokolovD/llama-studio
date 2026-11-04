@@ -5,6 +5,8 @@
 #include "studiobutton.h"
 #include "modellibrary.h"
 #include "monitordialog.h"
+#include "modelpicker.h"
+#include "modelcache.h"
 #include <QtTest>
 #include <QtWidgets>
 #include <QTcpServer>
@@ -13,8 +15,26 @@
 #include <QTcpSocket>
 class GuiTest : public QObject {
     Q_OBJECT
+    QTemporaryDir settingsDirectory;
     void answerExit(bool yes){QTimer::singleShot(0,qApp,[yes]{auto box=qobject_cast<QMessageBox*>(QApplication::activeModalWidget());QVERIFY(box);auto button=box->findChild<QPushButton*>(yes?"exitYes":"exitNo");QVERIFY(button);QTest::mouseClick(button,Qt::LeftButton,Qt::NoModifier,QPoint(2,button->height()/2));});}
 private slots:
+    void modelPickerAndParameterPaths(){
+        QTemporaryDir dir;QVERIFY(QDir(dir.path()).mkdir("A"));QVERIFY(QDir(dir.path()).mkdir("B"));const auto a=dir.filePath("A/main.gguf"),b=dir.filePath("B/projector.gguf");
+        for(const auto &path:QStringList{a,b}){QFile file(path);QVERIFY(file.open(QIODevice::WriteOnly));QDataStream s(&file);s.setByteOrder(QDataStream::LittleEndian);s.writeRawData("GGUF",4);s<<quint32(3)<<quint64(0)<<quint64(0);}
+        ModelCache cache;auto first=cache.get(a),second=cache.get(b);cache.setDirectory(dir.filePath("A"),true,{first});cache.setDirectory(dir.filePath("B"),true,{second});QString error;QVERIFY2(cache.save(&error),qPrintable(error));
+        ModelPickerDialog picker("Выбор",a);auto source=picker.findChild<QComboBox*>("modelPickerSource");auto table=picker.findChild<QTableWidget*>("modelPickerTable");auto filter=picker.findChild<QLineEdit*>("modelPickerFilter");auto choose=picker.findChild<QPushButton*>("useCachedModel");QVERIFY(picker.findChild<QPushButton*>("browseAnyModelFile"));QVERIFY(source->findData(dir.filePath("A"))>=0);source->setCurrentIndex(source->findData(dir.filePath("A")));int row=-1,visible=0;for(int i=0;i<table->rowCount();++i){if(!table->isRowHidden(i))++visible;if(table->item(i,4)->text()==QDir::toNativeSeparators(a))row=i;}QCOMPARE(visible,1);QVERIFY(row>=0);table->selectRow(row);QVERIFY(choose->isEnabled());filter->setText("projector");QVERIFY(!choose->isEnabled());filter->clear();table->selectRow(row);choose->click();QCOMPARE(picker.selectedPath(),a);
+        MainWindow window(nullptr,false,false);window.show();for(const auto &name:QStringList{"--model","--mmproj","--spec-draft-model"})window.config.find(name)->enabled=true;window.navigation->setCurrentRow(1);window.rebuild();
+        for(const auto &name:QStringList{"--model","--mmproj","--spec-draft-model"}){auto browse=window.findChild<QPushButton*>("browse:"+name);QVERIFY(browse);QVERIFY(browse->isEnabled());QTimer::singleShot(0,qApp,[a]{auto active=qobject_cast<QDialog*>(QApplication::activeModalWidget());auto dialog=qobject_cast<ModelPickerDialog*>(active);if(!dialog){if(active)active->reject();QFAIL("Expected model picker");}auto rows=dialog->findChild<QTableWidget*>("modelPickerTable");for(int r=0;r<rows->rowCount();++r)if(rows->item(r,4)->text()==QDir::toNativeSeparators(a)){rows->selectRow(r);dialog->findChild<QPushButton*>("useCachedModel")->click();return;}dialog->reject();QFAIL("Cached model missing");});browse->click();QCOMPARE(QDir::fromNativeSeparators(window.config.find(name)->value.toString()),a);}
+        answerExit(true);window.close();
+    }
+    void lastProfileRestored(){
+        QSettings().remove("lastProfilePath");QTemporaryDir dir;QString error;const auto profile=dir.filePath("profile.json");
+        MainWindow first(nullptr,false,false);first.config.fitContext=0;first.config.directory="C:/profile-llama";first.config.find("--temp")->value=0.37;first.config.find("--temp")->enabled=true;QVERIFY(first.saveProfile(profile,&error));
+        MainWindow restored(nullptr,false);QCOMPARE(restored.config.fitContext,0);QCOMPARE(restored.directory->text(),QString("C:/profile-llama"));QCOMPARE(restored.config.find("--temp")->value.toDouble(),0.37);QVERIFY(restored.config.find("--temp")->enabled);QCOMPARE(restored.windowFilePath(),profile);
+        QFile bad(dir.filePath("bad.json"));QVERIFY(bad.open(QIODevice::WriteOnly));bad.write("bad JSON");bad.close();QVERIFY(!first.loadProfile(bad.fileName(),&error));QVERIFY(!first.saveProfile(dir.filePath("missing/fail.json"),&error));QCOMPARE(QSettings().value("lastProfilePath").toString(),profile);
+        QFile catalog(":/parameters.json");QVERIFY(catalog.open(QIODevice::ReadOnly));QFile second(dir.filePath("second.json"));QVERIFY(second.open(QIODevice::WriteOnly));second.write(catalog.readAll());second.close();QVERIFY(first.loadProfile(second.fileName(),&error,true));QCOMPARE(QSettings().value("lastProfilePath").toString(),profile);QVERIFY(first.loadProfile(second.fileName(),&error));QCOMPARE(QSettings().value("lastProfilePath").toString(),second.fileName());
+        QVERIFY(QFile::remove(second.fileName()));MainWindow missing(nullptr,false);QVERIFY(missing.status->text().contains(QString::fromUtf8("Профиль недоступен")));QVERIFY(missing.config.parameters.size()>200);QSettings().setValue("lastProfilePath",bad.fileName());MainWindow invalid(nullptr,false);QVERIFY(invalid.status->text().contains(QString::fromUtf8("Профиль недоступен")));QSettings().remove("lastProfilePath");
+    }
     void localVersionParsing_data(){
         QTest::addColumn<QString>("output");QTest::addColumn<qint64>("build");QTest::addColumn<QString>("name");QTest::addColumn<QString>("commit");
         QTest::newRow("modern")<<QString("version: 0.8.0-dev (build 12024, commit ddf48f85c)\r\nbuilt with MSVC 19.51.36246.0 for x64\r\n")<<qint64(12024)<<QString("0.8.0-dev")<<QString("ddf48f85c");
@@ -33,7 +53,7 @@ private slots:
         QVERIFY(write(dir.filePath("model.gguf"),-1));const auto first=dir.filePath("nested/model-00001-of-00002.GGUF");QVERIFY(write(first,0));QVERIFY(write(dir.filePath("nested/model-00002-of-00002.GGUF"),1));QFile bad(dir.filePath("broken.gguf"));QVERIFY(bad.open(QIODevice::WriteOnly));bad.write("bad");bad.close();
         ModelLibraryDialog dialog(dir.path());dialog.show();auto table=dialog.findChild<QTableWidget*>("modelLibraryTable");QVERIFY(table);QTRY_COMPARE(table->rowCount(),4);QTRY_VERIFY(dialog.findChild<QLabel*>("modelLibraryStatus")->text().contains(QString::fromUtf8("завершено")));
         auto filter=dialog.findChild<QLineEdit*>("modelLibraryFilter");filter->setText("Q4_K_M");int visible=0,selected=-1;for(int r=0;r<table->rowCount();++r){if(!table->isRowHidden(r))++visible;if(table->item(r,0)->text().contains("00002-of"))selected=r;}QCOMPARE(visible,3);QVERIFY(selected>=0);table->selectRow(selected);QSignalSpy choice(&dialog,&ModelLibraryDialog::modelSelected);auto use=dialog.findChild<QComboBox*>();QVERIFY(use);use->setCurrentIndex(2);for(auto button:dialog.findChildren<QPushButton*>())if(button->text()==QString::fromUtf8("Использовать выбранную"))button->click();QCOMPARE(choice.size(),1);QCOMPARE(choice[0][0].toString(),first);QCOMPARE(choice[0][1].toString(),QString("--spec-draft-model"));
-        if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR"))dialog.grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/models-preview.png");dialog.close();
+        if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR"))dialog.grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/models-preview.png");dialog.close();QVERIFY(write(dir.filePath("new.gguf"),-1));ModelLibraryDialog reopened(dir.path());auto cachedTable=reopened.findChild<QTableWidget*>("modelLibraryTable");QCOMPARE(cachedTable->rowCount(),4);QVERIFY(reopened.findChild<QLabel*>("modelLibraryStatus")->text().contains("JSON"));for(auto button:reopened.findChildren<QPushButton*>())if(button->text()==QString::fromUtf8("Обновить каталог"))button->click();QTRY_COMPARE(cachedTable->rowCount(),5);reopened.close();
     }
     void monitorWindowLifecycle(){
         MainWindow window(nullptr,false);window.show();window.showMonitor();auto dialog=window.findChild<MonitorDialog*>("hardwareMonitorWindow");QVERIFY(dialog);window.showMonitor();QCOMPARE(window.findChildren<MonitorDialog*>().size(),1);
@@ -44,6 +64,7 @@ private slots:
         QVERIFY(dialog->width()<=400);if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR"))dialog->grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/monitor-preview.png");dialog->close();QTRY_VERIFY(window.findChild<MonitorDialog*>("hardwareMonitorWindow")==nullptr);window.showMonitor();auto reopened=window.findChild<MonitorDialog*>("hardwareMonitorWindow");QVERIFY(reopened);QCOMPARE(reopened->findChild<QLabel*>("monitorModel")->text(),QString("test-model.gguf"));window.performance.stop();QVERIFY(reopened->findChild<QLabel*>("monitorUptime")->text().contains(QString::fromUtf8("Остановлен")));answerExit(true);window.close();
     }
     void initTestCase() {
+        QVERIFY(settingsDirectory.isValid());QStandardPaths::setTestModeEnabled(true);QCoreApplication::setOrganizationName("LlamaStudioTests");QCoreApplication::setApplicationName("LlamaStudioTests");QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settingsDirectory.path());
         QApplication::setStyle("Fusion");QFile style(":/style.qss");if(style.open(QIODevice::ReadOnly))qApp->setStyleSheet(QString::fromUtf8(style.readAll()));
     }
     void builderSettingsAndVersion() {

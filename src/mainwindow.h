@@ -20,7 +20,7 @@ class BuilderPage;
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
-    explicit MainWindow(QWidget *parent = nullptr, bool checkUpdatesOnStartup = true);
+    explicit MainWindow(QWidget *parent = nullptr, bool checkUpdatesOnStartup = true,bool restoreLastProfile=true);
     bool smokeTest(const QString &screenshot);
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -55,6 +55,8 @@ private:
     void updateButtons();
     void loadFile(bool catalog = false);
     void saveFile();
+    bool loadProfile(const QString &path,QString *error,bool catalog=false);
+    bool saveProfile(const QString &path,QString *error);
     void reset();
     void showAdvisor();
     void showModels();

@@ -23,7 +23,7 @@ if ($version[0] -notmatch '(\d+\.\d+\.\d+)' -or [version]$Matches[1] -lt [versio
 $buildRoot = Full-Path $BuildDirectory
 $outputPath = Full-Path $OutputDirectory
 # A separate build tree is required when switching ABI/compiler from MinGW.
-& cmake -S $projectRoot -B $buildRoot -G 'Visual Studio 18 2026' -A x64 "-DCMAKE_PREFIX_PATH=$QtRoot" '-DLLAMA_STUDIO_STATIC_QT=ON' '-DLLAMA_STUDIO_MSVC_RUNTIME=MultiThreaded' '-DBUILD_TESTING=ON'
+& cmake -S $projectRoot -B $buildRoot -G 'Visual Studio 18 2026' -A x64 "-DCMAKE_PREFIX_PATH=$QtRoot" '-DLLAMA_STUDIO_STATIC_MSVC=ON' '-DBUILD_TESTING=ON'
 Check-Exit 'Configure MSVC 2026 static x64'
 & cmake --build $buildRoot --config Release --parallel $Jobs
 Check-Exit 'Build'

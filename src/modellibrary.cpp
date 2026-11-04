@@ -1,5 +1,6 @@
 #include "modellibrary.h"
 #include "studiobutton.h"
+#include "modelcache.h"
 #include <QtWidgets>
 #include <QDirIterator>
 namespace {
@@ -11,36 +12,39 @@ public:
 QString number(qint64 n){return n>0?QLocale().toString(n):QString("—");}
 }
 void ModelScan::run(){
-    canceled=false;
+    canceled=false;cacheHits=0;cacheError.clear();ModelCache cache;QVector<ModelInfo> results;
     QDirIterator files(directory,QDir::Files|QDir::Readable|QDir::NoSymLinks,recursive?QDirIterator::Subdirectories:QDirIterator::NoIteratorFlags);
     while(!isInterruptionRequested()&&files.hasNext()){
         const auto path=files.next();if(QFileInfo(path).suffix().compare("gguf",Qt::CaseInsensitive))continue;
-        const auto info=readModelInfo(path);if(isInterruptionRequested())break;emit found(info);
+        bool hit=false;const auto info=cache.get(path,force,&hit);if(isInterruptionRequested())break;if(hit)++cacheHits;results<<info;emit found(info);
     }
     canceled=isInterruptionRequested();
+    if(!canceled)cache.setDirectory(directory,recursive,results);cache.save(&cacheError);
 }
 ModelLibraryDialog::ModelLibraryDialog(const QString &folder,QWidget *parent):QDialog(parent){
     qRegisterMetaType<ModelInfo>();setWindowTitle("Каталог моделей GGUF");setObjectName("modelLibraryWindow");resize(1320,760);
     auto root=new QVBoxLayout(this);auto title=new QLabel("Локальные модели");title->setObjectName("title");root->addWidget(title);
-    auto paths=new QHBoxLayout;directory=new QLineEdit(folder);directory->setObjectName("modelLibraryDirectory");directory->setPlaceholderText("Папка с GGUF-моделями");paths->addWidget(directory,1);auto browse=new StudioButton("Обзор…");paths->addWidget(browse);refresh=new StudioButton("Сканировать");paths->addWidget(refresh);cancel=new StudioButton("Отмена");paths->addWidget(cancel);cancel->setEnabled(false);root->addLayout(paths);
+    auto paths=new QHBoxLayout;directory=new QLineEdit(folder);directory->setObjectName("modelLibraryDirectory");directory->setPlaceholderText("Папка с GGUF-моделями");paths->addWidget(directory,1);auto browse=new StudioButton("Обзор…");paths->addWidget(browse);refresh=new StudioButton("Обновить каталог");paths->addWidget(refresh);cancel=new StudioButton("Отмена");paths->addWidget(cancel);cancel->setEnabled(false);root->addLayout(paths);
     auto options=new QHBoxLayout;recursive=new QCheckBox("Включая вложенные папки");recursive->setChecked(true);options->addWidget(recursive);filter=new QLineEdit;filter->setObjectName("modelLibraryFilter");filter->setPlaceholderText("Фильтр по модели, архитектуре, квантованию или пути");filter->setClearButtonEnabled(true);options->addWidget(filter,1);root->addLayout(options);
     auto note=new QLabel("Читаются только метаданные GGUF, веса не загружаются. Одна строка — один файл; для разделённой модели указан размер части, а не всех весов. Квантование берётся из general.file_type, не из имени файла.");note->setWordWrap(true);root->addWidget(note);
+    force=new QCheckBox("Перечитать все GGUF при обновлении");force->setObjectName("forceModelRefresh");root->addWidget(force);auto cachePath=new QLabel("JSON-кэш: "+ModelCache::defaultPath());cachePath->setTextFormat(Qt::PlainText);cachePath->setWordWrap(true);cachePath->setTextInteractionFlags(Qt::TextSelectableByMouse);root->addWidget(cachePath);
     table=new QTableWidget(0,12);table->setObjectName("modelLibraryTable");table->setHorizontalHeaderLabels({"Файл","Название модели","Архитектура","Масштаб","Квантование","Размер файла, ГиБ","Контекст модели","Слоёв","Часть","Шаблон чата","Тип / состояние","Полный путь"});table->setEditTriggers(QAbstractItemView::NoEditTriggers);table->setSelectionBehavior(QAbstractItemView::SelectRows);table->setSelectionMode(QAbstractItemView::SingleSelection);table->setSortingEnabled(true);table->verticalHeader()->hide();table->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);table->horizontalHeader()->setStretchLastSection(true);table->setColumnWidth(0,260);table->setColumnWidth(1,220);table->setColumnWidth(5,145);table->setColumnWidth(6,145);root->addWidget(table,1);
     status=new QLabel("Выберите папку и нажмите «Сканировать».");status->setObjectName("modelLibraryStatus");status->setWordWrap(true);root->addWidget(status);
     auto footer=new QHBoxLayout;role=new QComboBox;role->addItem("Основная модель","--model");role->addItem("Проектор (mmproj)","--mmproj");role->addItem("Черновая модель","--spec-draft-model");footer->addWidget(role);use=new StudioButton("Использовать выбранную");use->setEnabled(false);footer->addWidget(use);footer->addStretch();auto close=new StudioButton("Закрыть");footer->addWidget(close);root->addLayout(footer);
-    connect(browse,&QPushButton::clicked,this,[this]{const auto path=QFileDialog::getExistingDirectory(this,"Папка с моделями",directory->text());if(!path.isEmpty()){directory->setText(path);startScan();}});
+    connect(browse,&QPushButton::clicked,this,[this]{const auto path=QFileDialog::getExistingDirectory(this,"Папка с моделями",directory->text());if(!path.isEmpty()){directory->setText(path);if(!loadCachedDirectory())startScan();}});
     connect(refresh,&QPushButton::clicked,this,&ModelLibraryDialog::startScan);connect(directory,&QLineEdit::returnPressed,this,&ModelLibraryDialog::startScan);connect(cancel,&QPushButton::clicked,&scan,&QThread::requestInterruption);connect(filter,&QLineEdit::textChanged,this,&ModelLibraryDialog::filterRows);connect(use,&QPushButton::clicked,this,&ModelLibraryDialog::selectModel);connect(close,&QPushButton::clicked,this,&QDialog::close);
     connect(table,&QTableWidget::itemSelectionChanged,this,[this]{auto item=table->item(table->currentRow(),0);use->setEnabled(item&&!item->data(Qt::UserRole).toString().isEmpty()&&!table->isRowHidden(item->row()));});
     connect(&scan,&ModelScan::found,this,&ModelLibraryDialog::addModel);
-    connect(&scan,&QThread::finished,this,[this,browse]{directory->setEnabled(true);recursive->setEnabled(true);browse->setEnabled(true);refresh->setEnabled(true);cancel->setEnabled(false);status->setText(QString("%1 Файлов: %2; ошибок чтения: %3; размер найденных файлов: %4 ГиБ.").arg(scan.canceled?"Сканирование отменено.":"Сканирование завершено.").arg(table->rowCount()).arg(errors).arg(totalBytes/1073741824.0,0,'f',2));});
-    connect(&scan,&QThread::started,this,[this,browse]{directory->setEnabled(false);recursive->setEnabled(false);browse->setEnabled(false);refresh->setEnabled(false);cancel->setEnabled(true);});
-    if(QFileInfo(folder).isDir())QTimer::singleShot(0,this,&ModelLibraryDialog::startScan);
+    connect(&scan,&QThread::finished,this,[this,browse]{directory->setEnabled(true);recursive->setEnabled(true);force->setEnabled(true);browse->setEnabled(true);refresh->setEnabled(true);cancel->setEnabled(false);status->setText(QString("%1 Файлов: %2; ошибок: %3; размер: %4 ГиБ; из JSON: %5.").arg(scan.canceled?"Сканирование отменено.":"Сканирование завершено.").arg(table->rowCount()).arg(errors).arg(totalBytes/1073741824.0,0,'f',2).arg(scan.cacheHits)+(scan.cacheError.isEmpty()?QString():"\n"+scan.cacheError));});
+    connect(&scan,&QThread::started,this,[this,browse]{directory->setEnabled(false);recursive->setEnabled(false);force->setEnabled(false);browse->setEnabled(false);refresh->setEnabled(false);cancel->setEnabled(true);});
+    if(!folder.isEmpty()&&!loadCachedDirectory()&&QFileInfo(folder).isDir())QTimer::singleShot(0,this,&ModelLibraryDialog::startScan);
 }
 ModelLibraryDialog::~ModelLibraryDialog(){scan.requestInterruption();scan.wait();}
 void ModelLibraryDialog::startScan(){
     if(scan.isRunning())return;QDir folder(directory->text());if(directory->text().trimmed().isEmpty()||!folder.exists()){status->setText("Укажите существующую папку с моделями.");return;}
-    scan.directory=folder.absolutePath();scan.recursive=recursive->isChecked();table->setRowCount(0);use->setEnabled(false);errors=0;totalBytes=0;emit directoryChanged(scan.directory);status->setText("Сканирование метаданных…");scan.start();
+    scan.directory=folder.absolutePath();scan.recursive=recursive->isChecked();scan.force=force->isChecked();table->setRowCount(0);use->setEnabled(false);errors=0;totalBytes=0;emit directoryChanged(scan.directory);status->setText("Обновление каталога и проверка изменений файлов…");scan.start();
 }
+bool ModelLibraryDialog::loadCachedDirectory(){bool found=false;ModelCache cache;const auto models=cache.directory(directory->text(),recursive->isChecked(),&found);if(!found)return false;table->setRowCount(0);errors=0;totalBytes=0;for(const auto &model:models)addModel(model);status->setText(QString("Загружено из JSON без сканирования: %1 файлов. Для поиска новых и изменённых моделей нажмите «Обновить каталог».").arg(models.size()));emit directoryChanged(directory->text());return true;}
 void ModelLibraryDialog::addModel(const ModelInfo &m){
     table->setSortingEnabled(false);int row=table->rowCount();table->insertRow(row);totalBytes+=m.fileBytes;if(!m.error.isEmpty())++errors;
     QString selected=m.path;QString state=m.error.isEmpty()?(m.modelType.isEmpty()?"GGUF":m.modelType):m.error;

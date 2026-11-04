@@ -11,7 +11,7 @@ class QPushButton;
 class ModelScan:public QThread{
     Q_OBJECT
 public:
-    QString directory;bool recursive=true,canceled=false;
+    QString directory,cacheError;bool recursive=true,canceled=false,force=false;int cacheHits=0;
 signals:
     void found(const ModelInfo &info);
 protected:
@@ -28,7 +28,7 @@ signals:
 private:
     QLineEdit *directory,*filter;
     QTableWidget *table;
-    QCheckBox *recursive;
+    QCheckBox *recursive,*force;
     QComboBox *role;
     QLabel *status;
     QPushButton *refresh,*cancel,*use;
@@ -38,4 +38,5 @@ private:
     void addModel(const ModelInfo &info);
     void filterRows();
     void selectModel();
+    bool loadCachedDirectory();
 };

@@ -2,6 +2,7 @@
 #include "advisordialog.h"
 #include "builderpage.h"
 #include "modellibrary.h"
+#include "modelpicker.h"
 #include "monitordialog.h"
 #include "version.h"
 #include "studiobutton.h"
@@ -22,7 +23,7 @@ QPushButton *button(const QString &text, QLayout *layout, const QString &name = 
     auto b = new StudioButton(text); b->setObjectName(name); layout->addWidget(b); return b;
 }
 }
-MainWindow::MainWindow(QWidget *parent, bool checkUpdatesOnStartup) : QMainWindow(parent) {
+MainWindow::MainWindow(QWidget *parent, bool checkUpdatesOnStartup,bool restoreLastProfile) : QMainWindow(parent) {
     QFile catalog(QCoreApplication::applicationDirPath() + "/parameters.json");
     if (!catalog.exists()) catalog.setFileName(":/parameters.json");
     QString message;
@@ -30,8 +31,12 @@ MainWindow::MainWindow(QWidget *parent, bool checkUpdatesOnStartup) : QMainWindo
         QFile fallback(":/parameters.json"); fallback.open(QIODevice::ReadOnly); config.load(fallback.readAll(), &message);
         QTimer::singleShot(0, this, [this, message] { error("Каталог рядом с программой не прочитан. Загружен встроенный. " + message); });
     }
+    QString profileWarning,restoredPath;
+    if(restoreLastProfile){const auto path=QSettings().value("lastProfilePath").toString();if(!path.isEmpty()){QFile file(path);Config next;QString reason;if(!file.open(QIODevice::ReadOnly))reason=file.errorString();else if(next.load(file.readAll(),&reason)){config=next;restoredPath=path;}if(!reason.isEmpty())profileWarning="Не удалось загрузить последний профиль "+path+": "+reason;}}
     if (config.directory.isEmpty() && QDir("C:/llama.cpp").exists()) config.directory = "C:/llama.cpp";
     buildUi(); rebuild(); updatePreview();
+    if(!restoredPath.isEmpty()){setWindowFilePath(restoredPath);log("[Загружен последний профиль: "+restoredPath+"]\n");}
+    if(!profileWarning.isEmpty()){log("["+profileWarning+"]\n");status->setText("Профиль недоступен · настройки по умолчанию");status->setToolTip(profileWarning);}
     server.setProcessChannelMode(QProcess::SeparateChannels);
     fit.setProcessChannelMode(QProcess::SeparateChannels);
     connect(&server, &QProcess::readyReadStandardOutput, this, [this] { readLog(server, true, serverPending); });
@@ -179,17 +184,18 @@ void MainWindow::rebuild() {
             connect(combo, qOverload<int>(&QComboBox::currentIndexChanged), this, [combo, change](int n) { change(n == 0 ? QJsonValue(QJsonValue::Null) : QJsonValue(combo->currentData().toString())); }); break;
         }
         default: {
-            auto line = new QLineEdit(p.value.toString()); vl->addWidget(line, 1);
+            auto line = new QLineEdit(p.value.toString());line->setObjectName("parameter:"+p.name); vl->addWidget(line, 1);
             if (p.name == "--api-key" || p.name == "--hf-token") line->setEchoMode(QLineEdit::Password);
             line->setPlaceholderText(p.value.isNull() ? "Значение наследуется из llama.cpp" : "Значение");
             connect(line, &QLineEdit::textChanged, this, [change](const QString &s) { change(s); });
             if (p.type == DataType::Path) {
-                auto browse = button("…", vl); browse->setMaximumWidth(38);
+                auto browse = button("…", vl);browse->setObjectName("browse:"+p.name); browse->setMaximumWidth(38);
                 connect(browse, &QPushButton::clicked, this, [this, line, i] {
                     const auto name = config.parameters[i].name;
                     bool dir = name.endsWith("-dir") || name == "--models-dir" || name == "--slot-save-path" || name == "--media-path" || name == "--path";
                     QString path;
                     if (dir) path = QFileDialog::getExistingDirectory(this, "Выбрать папку", line->text());
+                    else if(QStringList{"--model","--mmproj","--spec-draft-model"}.contains(name))path=ModelPickerDialog::choose(this,"Выбрать модель · "+name,line->text());
                     else if (name == "--lora" || name == "--control-vector") { auto list = QFileDialog::getOpenFileNames(this, "Выбрать файлы", line->text(), "Модели (*.gguf);;Все файлы (*)"); path = list.join(','); }
                     else path = QFileDialog::getOpenFileName(this, "Выбрать файл", line->text(), "Все файлы (*);;Модели (*.gguf)");
                     if (!path.isEmpty()) line->setText(QDir::toNativeSeparators(path));
@@ -244,8 +250,12 @@ void MainWindow::readLog(QProcess &process, bool out, QByteArray &pending, bool 
 void MainWindow::loadFile(bool catalog) {
     if (fit.state() != QProcess::NotRunning||buildPage->busy()) { error("Дождитесь завершения подбора/сборки или отмените их."); return; }
     auto path = QFileDialog::getOpenFileName(this, catalog ? "Каталог параметров" : "Конфигурация", {}, "JSON (*.json)"); if (path.isEmpty()) return;
-    QFile file(path); QString message; Config next;
-    if (!file.open(QIODevice::ReadOnly) || !next.load(file.readAll(), &message)) { error("Не удалось загрузить файл. " + message); return; }
+    QString message;if(!loadProfile(path,&message,catalog))error(message);
+}
+bool MainWindow::loadProfile(const QString &path,QString *message,bool catalog){
+    if(fit.state()!=QProcess::NotRunning||buildPage->busy()){if(message)*message="Дождитесь завершения подбора/сборки.";return false;}
+    QFile file(path);Config next;QString reason;if(!file.open(QIODevice::ReadOnly))reason=file.errorString();else if(next.load(file.readAll(),&reason))reason.clear();else if(reason.isEmpty())reason="Неверный JSON профиля.";
+    if(!reason.isEmpty()){if(message)*message="Не удалось загрузить профиль: "+reason;return false;}
     if (catalog) { next.directory = config.directory; next.fitContext = config.fitContext;next.metadata["build"]=config.metadata.value("build"); }
     config = next; directory->setText(config.directory); context->setValue(config.fitContext);
     buildPage->loadSettings(config.metadata.value("build").toObject());
@@ -253,12 +263,13 @@ void MainWindow::loadFile(bool catalog) {
     navigation->blockSignals(true); navigation->clear(); navigation->addItem("Частые параметры"); navigation->addItem("Модели и адаптеры");
     for (auto group : config.metadata.value("groups").toArray()) navigation->addItem(groupLabel(group.toString()));
     navigation->addItem("Включённые параметры"); navigation->setCurrentRow(0); navigation->blockSignals(false); rebuild(); updatePreview();
+    if(!catalog){const auto absolute=QFileInfo(path).absoluteFilePath();QSettings settings;settings.setValue("lastProfilePath",absolute);settings.sync();setWindowFilePath(absolute);}return true;
 }
 void MainWindow::saveFile() {
     auto path = QFileDialog::getSaveFileName(this, "Сохранить конфигурацию", "llama-config.json", "JSON (*.json)"); if (path.isEmpty()) return;
-    QSaveFile file(path); auto data = config.save();
-    if (!file.open(QIODevice::WriteOnly) || file.write(data) != data.size() || !file.commit()) error("Не удалось сохранить конфигурацию: " + file.errorString());
+    QString message;if(!saveProfile(path,&message))error(message);
 }
+bool MainWindow::saveProfile(const QString &path,QString *message){QSaveFile file(path);const auto data=config.save();if(!file.open(QIODevice::WriteOnly)||file.write(data)!=data.size()||!file.commit()){if(message)*message="Не удалось сохранить конфигурацию: "+file.errorString();return false;}const auto absolute=QFileInfo(path).absoluteFilePath();QSettings settings;settings.setValue("lastProfilePath",absolute);settings.sync();setWindowFilePath(absolute);return true;}
 void MainWindow::reset() {
     if (fit.state() != QProcess::NotRunning) return;
     for (auto &p : config.parameters) { p.value = p.definition.value("default"); p.enabled = false; }

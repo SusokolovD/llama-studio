@@ -10,6 +10,7 @@
       "binaryDir": "${sourceDir}/build-msvc2026-static",
       "cacheVariables": {
         "CMAKE_PREFIX_PATH": "$env{QT_MSVC_STATIC_ROOT}",
+        "LLAMA_STUDIO_STATIC_MSVC": "ON",
         "LLAMA_STUDIO_STATIC_QT": "ON",
         "LLAMA_STUDIO_MSVC_RUNTIME": "MultiThreaded",
         "BUILD_TESTING": "ON"

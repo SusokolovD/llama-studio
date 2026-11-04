@@ -2,6 +2,7 @@
 #include "advisor.h"
 #include "hardwaremonitor.h"
 #include "modelperformance.h"
+#include "modelcache.h"
 #include <QtTest>
 #include <QFile>
 #include <QTemporaryDir>
@@ -12,6 +13,15 @@ class ConfigTest : public QObject {
         if (!c.load(f.readAll(), &e)) qFatal("%s", qPrintable(e)); return c;
     }
 private slots:
+    void modelJsonCache(){
+        QTemporaryDir dir;const auto path=dir.filePath("model.gguf"),cachePath=dir.filePath("models-cache.json");QFile file(path);QVERIFY(file.open(QIODevice::WriteOnly));QDataStream s(&file);s.setByteOrder(QDataStream::LittleEndian);auto string=[&](const QByteArray &v){s<<quint64(v.size());s.writeRawData(v.constData(),v.size());};s.writeRawData("GGUF",4);s<<quint32(3)<<quint64(0)<<quint64(3);string("general.name");s<<quint32(8);string("Cached model");string("general.architecture");s<<quint32(8);string("llama");string("general.file_type");s<<quint32(4)<<quint32(15);file.close();
+        bool hit=true;ModelCache initial(cachePath);auto info=initial.get(path,false,&hit);QVERIFY(!hit);QVERIFY(info.error.isEmpty());initial.setDirectory(dir.path(),true,{info});QString error;QVERIFY2(initial.save(&error),qPrintable(error));QFile json(cachePath);QVERIFY(json.open(QIODevice::ReadOnly));QVERIFY(QJsonDocument::fromJson(json.readAll()).object().value("models").toObject().size()==1);json.close();
+        const auto stamp=QFileInfo(path).lastModified();QVERIFY(file.open(QIODevice::ReadWrite));QCOMPARE(file.write("BAD!",4),qint64(4));QVERIFY(file.setFileTime(stamp,QFileDevice::FileModificationTime));file.close();
+        ModelCache reopened(cachePath);auto cached=reopened.get(path,false,&hit);QVERIFY(hit);QCOMPARE(cached.name,QString("Cached model"));QCOMPARE(cached.fileType,qint64(15));QVERIFY(cached.error.isEmpty());bool found=false;QCOMPARE(reopened.directory(dir.path(),true,&found).size(),1);QVERIFY(found);QVERIFY(!reopened.get(path,true,&hit).error.isEmpty());QVERIFY(!hit);
+        QVERIFY(file.open(QIODevice::ReadWrite));QCOMPARE(file.write("GGUF",4),qint64(4));QVERIFY(file.seek(file.size()));file.write("x");file.close();auto changed=reopened.get(path,false,&hit);QVERIFY(!hit);QVERIFY(changed.error.isEmpty());QVERIFY(reopened.save(&error));
+        const auto other=dir.filePath("other.gguf");QVERIFY(QFile::copy(path,other));ModelCache a(cachePath),b(cachePath);a.get(path,true);b.get(other);QVERIFY(a.save(&error));QVERIFY(b.save(&error));ModelCache merged(cachePath);merged.get(path,false,&hit);QVERIFY(hit);merged.get(other,false,&hit);QVERIFY(hit);
+        QVERIFY(json.open(QIODevice::WriteOnly|QIODevice::Truncate));json.write("broken JSON");json.close();ModelCache broken(cachePath);QVERIFY(broken.get(path,false,&hit).error.isEmpty());QVERIFY(!hit);QVERIFY(broken.save(&error));
+    }
     void modelTimingReportsAndLifecycle(){
         const QString prefix="slot print_timings: id 0 | task 7 | ";auto report=parseModelTiming(prefix+"prompt eval time = 100.00 ms / 100 tokens (1.00 ms per token, 1000.00 tokens per second)");QCOMPARE(int(report.kind),int(TimingKind::Prompt));QCOMPARE(report.tokensPerSecond,1000.0);QCOMPARE(report.milliseconds,100.0);QVERIFY(report.task.contains("7"));
         report=parseModelTiming("slot update_slots: id 0 | task 7 | n_gen = 123, tg = 49.00 t/s, tg_3s = 50.00 t/s");QCOMPARE(int(report.kind),int(TimingKind::Generation));QCOMPARE(report.tokensPerSecond,50.0);QVERIFY(report.live);

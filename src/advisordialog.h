@@ -26,7 +26,7 @@ private:
     QCheckBox *cpu;
     QPushButton *detect, *apply, *applyFit;
     void updateAdvice();
-    void inspectModel();
+    void inspectModel(bool force=false);
     void detectDevices();
     void addDevice(const DeviceInfo &info);
 };
