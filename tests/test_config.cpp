@@ -3,6 +3,7 @@
 #include "hardwaremonitor.h"
 #include "modelperformance.h"
 #include "modelcache.h"
+#include "gpupower.h"
 #include <QtTest>
 #include <QFile>
 #include <QTemporaryDir>
@@ -13,6 +14,17 @@ class ConfigTest : public QObject {
         if (!c.load(f.readAll(), &e)) qFatal("%s", qPrintable(e)); return c;
     }
 private slots:
+    void gpuPowerServiceValidationAndReadback(){
+        auto parsed=parseGpuPowerInfo("GPU-aa, \"GPU, A\", 150, 200, 200, 100, 250, 60, 90\nGPU-cc, Other, 20, N/A, N/A, N/A, N/A, 40, 0");QCOMPARE(parsed.size(),2);QCOMPARE(parsed[0].name,QString("GPU, A"));QVERIFY(parsed[0].adjustable());QVERIFY(!parsed[1].adjustable());
+        QTemporaryDir dir;const auto exe=dir.filePath(QFileInfo(FIXTURE_PATH).fileName());QVERIFY(QFile::copy(FIXTURE_PATH,exe));GpuPowerService service(nullptr,exe);QSignalSpy results(&service,&GpuPowerService::completed);service.refresh();QTRY_VERIFY(!service.busy());QCOMPARE(service.devices().size(),3);QVERIFY(results.last()[0].toBool());
+        service.apply("GPU-aa",180);QTRY_VERIFY(!service.busy());QVERIFY2(results.last()[0].toBool(),qPrintable(results.last()[1].toString()));QCOMPARE(service.devices()[0].limit,180.0);QCOMPARE(service.devices()[1].limit,300.0);
+        QFile log(dir.filePath("power-commands.jsonl"));QVERIFY(log.open(QIODevice::ReadOnly));const auto commands=log.readAll();log.close();QVERIFY(commands.contains("GPU-aa"));QVERIFY(commands.contains("180.0"));auto count=commands.count('\n');
+        service.apply("GPU-aa",99);QVERIFY(!results.last()[0].toBool());service.apply("GPU-cc",100);QVERIFY(!results.last()[0].toBool());QVERIFY(log.open(QIODevice::ReadOnly));QCOMPARE(log.readAll().count('\n'),count);log.close();
+        service.restoreDefault("GPU-aa");QTRY_VERIFY(!service.busy());QVERIFY(results.last()[0].toBool());QCOMPARE(service.devices()[0].limit,200.0);
+        QFile denied(dir.filePath("power-denied"));QVERIFY(denied.open(QIODevice::WriteOnly));denied.close();service.apply("GPU-bb",200);QTRY_VERIFY(!service.busy());QVERIFY(!results.last()[0].toBool());QVERIFY(results.last()[1].toString().contains("Insufficient Permissions"));QCOMPARE(service.devices()[1].limit,300.0);QVERIFY(denied.remove());
+        QFile ignore(dir.filePath("power-ignore"));QVERIFY(ignore.open(QIODevice::WriteOnly));ignore.close();service.apply("GPU-aa",175);QTRY_VERIFY(!service.busy());QVERIFY(!results.last()[0].toBool());QVERIFY(results.last()[1].toString().contains(QString::fromUtf8("не подтверждено")));QCOMPARE(service.devices()[0].limit,200.0);
+        QVERIFY(ignore.remove());QFile hang(dir.filePath("power-hang"));QVERIFY(hang.open(QIODevice::WriteOnly));hang.close();service.apply("GPU-aa",175);QTRY_VERIFY_WITH_TIMEOUT(!service.busy(),8000);QVERIFY(!results.last()[0].toBool());QVERIFY(results.last()[1].toString().contains(QString::fromUtf8("время ожидания")));
+    }
     void modelJsonCache(){
         QTemporaryDir dir;const auto path=dir.filePath("model.gguf"),cachePath=dir.filePath("models-cache.json");QFile file(path);QVERIFY(file.open(QIODevice::WriteOnly));QDataStream s(&file);s.setByteOrder(QDataStream::LittleEndian);auto string=[&](const QByteArray &v){s<<quint64(v.size());s.writeRawData(v.constData(),v.size());};s.writeRawData("GGUF",4);s<<quint32(3)<<quint64(0)<<quint64(3);string("general.name");s<<quint32(8);string("Cached model");string("general.architecture");s<<quint32(8);string("llama");string("general.file_type");s<<quint32(4)<<quint32(15);file.close();
         bool hit=true;ModelCache initial(cachePath);auto info=initial.get(path,false,&hit);QVERIFY(!hit);QVERIFY(info.error.isEmpty());initial.setDirectory(dir.path(),true,{info});QString error;QVERIFY2(initial.save(&error),qPrintable(error));QFile json(cachePath);QVERIFY(json.open(QIODevice::ReadOnly));QVERIFY(QJsonDocument::fromJson(json.readAll()).object().value("models").toObject().size()==1);json.close();

@@ -7,6 +7,7 @@
 #include "monitordialog.h"
 #include "modelpicker.h"
 #include "modelcache.h"
+#include "gpupowerdialog.h"
 #include <QtTest>
 #include <QtWidgets>
 #include <QTcpServer>
@@ -18,6 +19,11 @@ class GuiTest : public QObject {
     QTemporaryDir settingsDirectory;
     void answerExit(bool yes){QTimer::singleShot(0,qApp,[yes]{auto box=qobject_cast<QMessageBox*>(QApplication::activeModalWidget());QVERIFY(box);auto button=box->findChild<QPushButton*>(yes?"exitYes":"exitNo");QVERIFY(button);QTest::mouseClick(button,Qt::LeftButton,Qt::NoModifier,QPoint(2,button->height()/2));});}
 private slots:
+    void gpuPowerDialogControls(){
+        QTemporaryDir dir;const auto exe=dir.filePath(QFileInfo(FIXTURE_PATH).fileName());QVERIFY(QFile::copy(FIXTURE_PATH,exe));GpuPowerDialog dialog(nullptr,nullptr,exe);dialog.show();auto gpu=dialog.findChild<QComboBox*>("powerGpu");auto watts=dialog.findChild<QDoubleSpinBox*>("powerWatts");auto preset=dialog.findChild<QComboBox*>("powerPreset");auto apply=dialog.findChild<QPushButton*>("applyPowerLimit");auto restore=dialog.findChild<QPushButton*>("restorePowerLimit");auto status=dialog.findChild<QLabel*>("powerStatus");QTRY_COMPARE(gpu->count(),3);QTRY_VERIFY(apply->isEnabled());QCOMPARE(watts->value(),200.0);gpu->setCurrentIndex(gpu->findData("GPU-cc"));QVERIFY(!apply->isEnabled());gpu->setCurrentIndex(gpu->findData("GPU-aa"));preset->setCurrentIndex(preset->findData(80));QCOMPARE(watts->value(),160.0);
+        QFile log(dir.filePath("power-commands.jsonl"));QVERIFY(log.open(QIODevice::ReadOnly));QVERIFY(!log.readAll().contains("-pl"));log.close();apply->click();QTRY_VERIFY(status->text().contains(QString::fromUtf8("подтверждён")));QCOMPARE(watts->value(),160.0);QVERIFY(restore->isEnabled());restore->click();QTRY_COMPARE(watts->value(),200.0);QTRY_VERIFY(restore->isEnabled());
+        QCOMPARE(preset->currentIndex(),0);auto guide=dialog.findChild<QTextBrowser*>("gpuPowerGuide");QVERIFY(guide->toPlainText().contains(QString::fromUtf8("вымышленные")));QVERIFY(guide->toPlainText().contains(QString::fromUtf8("Несколько GPU")));if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR")){dialog.grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/power-preview.png");dialog.findChild<QTabWidget*>()->setCurrentIndex(1);dialog.grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/power-guide-preview.png");}dialog.close();
+    }
     void modelPickerAndParameterPaths(){
         QTemporaryDir dir;QVERIFY(QDir(dir.path()).mkdir("A"));QVERIFY(QDir(dir.path()).mkdir("B"));const auto a=dir.filePath("A/main.gguf"),b=dir.filePath("B/projector.gguf");
         for(const auto &path:QStringList{a,b}){QFile file(path);QVERIFY(file.open(QIODevice::WriteOnly));QDataStream s(&file);s.setByteOrder(QDataStream::LittleEndian);s.writeRawData("GGUF",4);s<<quint32(3)<<quint64(0)<<quint64(0);}

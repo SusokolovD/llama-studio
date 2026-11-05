@@ -1,5 +1,6 @@
 #include "monitordialog.h"
 #include "studiobutton.h"
+#include "gpupowerdialog.h"
 #include <QtWidgets>
 #include <QJsonDocument>
 #include <QJsonArray>
@@ -38,6 +39,7 @@ MonitorDialog::MonitorDialog(QWidget *parent,ModelPerformance *stats):QDialog(pa
     cpuText=text("CPU · ожидание измерения");systemLayout->addWidget(cpuText);cpu=new QProgressBar;cpu->setObjectName("monitorCpu");cpu->setRange(0,100);cpu->setTextVisible(false);systemLayout->addWidget(cpu);
     ramText=text("RAM · ожидание измерения");systemLayout->addWidget(ramText);ram=new QProgressBar;ram->setObjectName("monitorRam");ram->setRange(0,100);ram->setTextVisible(false);systemLayout->addWidget(ram);temperatureSummary=text("CPU t° · н/д (LHM)");temperatureSummary->setToolTip("Максимум доступных температур датчиков CPU Libre Hardware Monitor. ACPI-зоны не используются.");systemLayout->addWidget(temperatureSummary);history=new MonitorHistory;systemLayout->addWidget(history);content->addWidget(system);
     gpuSummary=text("GPU · ожидание…");gpuSummary->setObjectName("monitorGpuSummary");content->addWidget(gpuSummary);content->addStretch();
+    auto power=new StudioButton("Мощность GPU");power->setObjectName("gpuPowerButton");content->insertWidget(content->count()-1,power);connect(power,&QPushButton::clicked,this,[this]{if(auto existing=findChild<GpuPowerDialog*>("gpuPowerWindow")){existing->showNormal();existing->raise();return;}auto dialog=new GpuPowerDialog(this,performance);dialog->setAttribute(Qt::WA_DeleteOnClose);dialog->show();});
     auto details=new QDialog(this);details->setObjectName("monitorDetailsWindow");details->setWindowTitle("Датчики и подробности мониторинга");details->resize(1000,640);auto detailLayout=new QVBoxLayout(details);
     auto note=text("Показатели всей системы. CPU/RAM/NVIDIA: 2 с, WMI: 6 с. Модель: последний отчёт слота из журнала, не сумма скоростей всех запросов. При отключённых логах скорость недоступна.");detailLayout->addWidget(note);
     auto tabs=new QTabWidget;detailLayout->addWidget(tabs,1);auto gpuPage=new QWidget;auto gpuLayout=new QVBoxLayout(gpuPage);gpuStatus=text();gpuLayout->addWidget(gpuStatus);gpus=::sensorTable({"GPU / UUID","Температура","Загрузка GPU","VRAM занято / всего","Мощность","Вентилятор","Обновлено"});gpus->setObjectName("monitorGpuTable");gpus->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);gpuLayout->addWidget(gpus);tabs->addTab(gpuPage,"NVIDIA");
@@ -47,14 +49,12 @@ MonitorDialog::MonitorDialog(QWidget *parent,ModelPerformance *stats):QDialog(pa
     connect(paused,&QCheckBox::toggled,this,[this](bool pause){if(pause){poll.stop();nvidia.killTree();sensors.killTree();}else{poll.start();sample();}});
     connect(hardwareSensors,&QCheckBox::toggled,this,[this](bool on){if(on){sensorTick=0;sampleSensors();}else{sensors.killTree();sensorTable->setRowCount(0);sensorStatus->setText("Опрос дополнительных датчиков выключен.");}});
     if(performance)connect(performance,&ModelPerformance::changed,this,&MonitorDialog::updateSummary);displayTimer.setInterval(1000);connect(&displayTimer,&QTimer::timeout,this,&MonitorDialog::updateSummary);displayTimer.start();updateSummary();
-    smi=QStandardPaths::findExecutable("nvidia-smi");
+    smi=nvidiaSmiPath();
 #ifdef Q_OS_WIN
     // A 32-bit Qt build must bypass WOW64 redirection to see 64-bit driver tools/providers.
     const auto windows=QDir(qEnvironmentVariable("SystemRoot"));
     const auto nativeDirectory=windows.filePath("Sysnative");
     const auto systemDirectory=QFileInfo(nativeDirectory).isDir()?nativeDirectory:windows.filePath("System32");
-    if(smi.isEmpty()){auto candidate=QDir(systemDirectory).filePath("nvidia-smi.exe");if(QFileInfo::exists(candidate))smi=candidate;}
-    if(smi.isEmpty()){auto candidate=qEnvironmentVariable("ProgramW6432")+"/NVIDIA Corporation/NVSMI/nvidia-smi.exe";if(QFileInfo::exists(candidate))smi=candidate;}
     powershell=QDir(systemDirectory).filePath("WindowsPowerShell/v1.0/powershell.exe");
 #endif
     nvidiaTimeout.setSingleShot(true);sensorsTimeout.setSingleShot(true);connect(&nvidiaTimeout,&QTimer::timeout,this,[this]{nvidia.killTree();});connect(&sensorsTimeout,&QTimer::timeout,this,[this]{sensors.killTree();});
