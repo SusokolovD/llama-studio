@@ -10,9 +10,10 @@ class QPushButton;
 class GpuPowerDialog:public QDialog{
     Q_OBJECT
 public:
-    explicit GpuPowerDialog(QWidget *parent=nullptr,ModelPerformance *performance=nullptr,const QString &executable=nvidiaSmiPath());
+    explicit GpuPowerDialog(QWidget *parent=nullptr,ModelPerformance *performance=nullptr,const QString &executable=nvidiaSmiPath(),GpuPowerService *shared=nullptr);
 private:
-    GpuPowerService service;
+    GpuPowerService ownedService;
+    GpuPowerService &service;
     QPointer<ModelPerformance> performance;
     QTimer poll;
     QComboBox *gpu,*preset;

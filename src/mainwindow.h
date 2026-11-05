@@ -3,6 +3,7 @@
 #include "releasechecker.h"
 #include "managedprocess.h"
 #include "modelperformance.h"
+#include "gpupower.h"
 #include <QMainWindow>
 #include <QProcess>
 #include <QNetworkAccessManager>
@@ -20,7 +21,7 @@ class BuilderPage;
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
-    explicit MainWindow(QWidget *parent = nullptr, bool checkUpdatesOnStartup = true,bool restoreLastProfile=true);
+    explicit MainWindow(QWidget *parent = nullptr, bool checkUpdatesOnStartup = true,bool restoreLastProfile=true,const QString &powerExecutable=nvidiaSmiPath());
     bool smokeTest(const QString &screenshot);
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -29,6 +30,8 @@ private:
     Config config;
     ManagedProcess server, fit;
     ModelPerformance performance;
+    GpuPowerService power;
+    bool launchAfterPower=false,powerReady=false,powerResetStarted=false,powerResetDone=false;
     QNetworkAccessManager network;
     ReleaseChecker releases;
     QTimer healthTimer;

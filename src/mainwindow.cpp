@@ -23,7 +23,7 @@ QPushButton *button(const QString &text, QLayout *layout, const QString &name = 
     auto b = new StudioButton(text); b->setObjectName(name); layout->addWidget(b); return b;
 }
 }
-MainWindow::MainWindow(QWidget *parent, bool checkUpdatesOnStartup,bool restoreLastProfile) : QMainWindow(parent) {
+MainWindow::MainWindow(QWidget *parent, bool checkUpdatesOnStartup,bool restoreLastProfile,const QString &powerExecutable) : QMainWindow(parent),power(this,powerExecutable) {
     QFile catalog(QCoreApplication::applicationDirPath() + "/parameters.json");
     if (!catalog.exists()) catalog.setFileName(":/parameters.json");
     QString message;
@@ -35,6 +35,10 @@ MainWindow::MainWindow(QWidget *parent, bool checkUpdatesOnStartup,bool restoreL
     if(restoreLastProfile){const auto path=QSettings().value("lastProfilePath").toString();if(!path.isEmpty()){QFile file(path);Config next;QString reason;if(!file.open(QIODevice::ReadOnly))reason=file.errorString();else if(next.load(file.readAll(),&reason)){config=next;restoredPath=path;}if(!reason.isEmpty())profileWarning="Не удалось загрузить последний профиль "+path+": "+reason;}}
     if (config.directory.isEmpty() && QDir("C:/llama.cpp").exists()) config.directory = "C:/llama.cpp";
     buildUi(); rebuild(); updatePreview();
+    power.profileLimits=config.metadata.value("gpuPowerLimits").toObject();
+    connect(&power,&GpuPowerService::limitApplied,this,[this](const QString &uuid,double watts){auto limits=config.metadata.value("gpuPowerLimits").toObject();limits[uuid]=watts;config.metadata["gpuPowerLimits"]=limits;const auto path=windowFilePath();if(path.isEmpty()){log("[Лимит GPU обновлён. Сохраните JSON-профиль кнопкой «Сохранить как…».]\n");return;}QFile original(path);Config disk;QString reason;if(!original.open(QIODevice::ReadOnly)||!disk.load(original.readAll(),&reason)){error("Лимит GPU применён, но не сохранён в профиль: "+(reason.isEmpty()?original.errorString():reason));return;}original.close();disk.metadata["gpuPowerLimits"]=limits;QSaveFile file(path);const auto bytes=disk.save();if(!file.open(QIODevice::WriteOnly)||file.write(bytes)!=bytes.size()||!file.commit())error("Лимит GPU применён, но не сохранён в профиль: "+file.errorString());});
+    connect(&power,&GpuPowerService::profileFinished,this,[this](bool success,const QString &message){if(!launchAfterPower)return;launchAfterPower=false;if(success&&!closeConfirmed){powerReady=true;launchServer();powerReady=false;}else{status->setText("Лимиты GPU не применены");log("["+message+"]\n");}updateButtons();});
+    connect(&power,&GpuPowerService::resetFinished,this,[this](bool success,const QString &message){if(!powerResetStarted)return;if(success){powerResetDone=true;QTimer::singleShot(0,this,&QWidget::close);}else{powerResetStarted=false;closeConfirmed=false;centralWidget()->setEnabled(true);for(auto dialog:findChildren<QDialog*>())dialog->setEnabled(true);QMessageBox::warning(this,"Заводские лимиты GPU","Не удалось вернуть заводские лимиты. Программа остаётся открытой.\n"+message);updateButtons();}});
     if(!restoredPath.isEmpty()){setWindowFilePath(restoredPath);log("[Загружен последний профиль: "+restoredPath+"]\n");}
     if(!profileWarning.isEmpty()){log("["+profileWarning+"]\n");status->setText("Профиль недоступен · настройки по умолчанию");status->setToolTip(profileWarning);}
     server.setProcessChannelMode(QProcess::SeparateChannels);
@@ -233,7 +237,7 @@ void MainWindow::updatePreview() {
 }
 void MainWindow::updateButtons() {
     bool s = server.state() != QProcess::NotRunning, f = fit.state() != QProcess::NotRunning;
-    bool building=buildPage&&buildPage->busy();startButton->setEnabled(!s && !f&&!building); stopButton->setEnabled(s); fitButton->setEnabled(!s && !f&&!building); cancelFitButton->setEnabled(f); openButton->setEnabled(s && !stopping);
+    bool building=buildPage&&buildPage->busy();startButton->setEnabled(!s && !f&&!building&&!launchAfterPower); stopButton->setEnabled(s); fitButton->setEnabled(!s && !f&&!building&&!launchAfterPower); cancelFitButton->setEnabled(f); openButton->setEnabled(s && !stopping);
 }
 void MainWindow::error(const QString &text) { QMessageBox::warning(this, "Llama Studio", text); }
 void MainWindow::log(const QString &text) { auto cursor = console->textCursor(); cursor.movePosition(QTextCursor::End); cursor.insertText(text); console->setTextCursor(cursor); console->ensureCursorVisible(); }
@@ -256,8 +260,9 @@ bool MainWindow::loadProfile(const QString &path,QString *message,bool catalog){
     if(fit.state()!=QProcess::NotRunning||buildPage->busy()){if(message)*message="Дождитесь завершения подбора/сборки.";return false;}
     QFile file(path);Config next;QString reason;if(!file.open(QIODevice::ReadOnly))reason=file.errorString();else if(next.load(file.readAll(),&reason))reason.clear();else if(reason.isEmpty())reason="Неверный JSON профиля.";
     if(!reason.isEmpty()){if(message)*message="Не удалось загрузить профиль: "+reason;return false;}
-    if (catalog) { next.directory = config.directory; next.fitContext = config.fitContext;next.metadata["build"]=config.metadata.value("build"); }
+    if (catalog) { next.directory = config.directory; next.fitContext = config.fitContext;next.metadata["build"]=config.metadata.value("build");next.metadata["gpuPowerLimits"]=config.metadata.value("gpuPowerLimits"); }
     config = next; directory->setText(config.directory); context->setValue(config.fitContext);
+    power.profileLimits=config.metadata.value("gpuPowerLimits").toObject();
     buildPage->loadSettings(config.metadata.value("build").toObject());
     config.metadata["build"]=buildPage->settings().toJson();
     navigation->blockSignals(true); navigation->clear(); navigation->addItem("Частые параметры"); navigation->addItem("Модели и адаптеры");
@@ -297,7 +302,7 @@ void MainWindow::showModels(){
 }
 void MainWindow::showMonitor(){
     if(auto existing=findChild<MonitorDialog*>("hardwareMonitorWindow")){existing->showNormal();existing->raise();existing->activateWindow();return;}
-    auto dialog=new MonitorDialog(this,&performance);dialog->setAttribute(Qt::WA_DeleteOnClose);dialog->show();
+    auto dialog=new MonitorDialog(this,&performance,&power);dialog->setAttribute(Qt::WA_DeleteOnClose);dialog->show();
 }
 bool MainWindow::validateModel() {
     auto p = config.find("--model");
@@ -318,6 +323,7 @@ void MainWindow::launchServer() {
     if (!router && !remote && !validateModel()) return;
     auto exe = findExecutable(config.directory, false);
     if (exe.path.isEmpty()) { error("Не найден llama-server. Выберите папку с готовыми бинарными файлами или корень llama.cpp со сборкой build/bin."); return; }
+    const auto limits=config.metadata.value("gpuPowerLimits").toObject();if(!powerReady&&!limits.isEmpty()){if(launchAfterPower)return;launchAfterPower=true;power.applyProfile(limits);status->setText("Применение лимитов GPU…");updateButtons();return;}
     QStringList args; QString message; if (!config.arguments(&args, &message)) { error(message); return; }
     args = exe.prefix + args; runningUrl = endpoint(); runningKey.clear();
     if (auto key = config.find("--api-key")) if (key->enabled) runningKey = key->value.toString().section(',', 0, 0).toUtf8();
@@ -367,13 +373,14 @@ void MainWindow::closeEvent(QCloseEvent *event) {
         QMessageBox question(QMessageBox::Question,"Завершить работу","Закрыть Llama Studio? Сервер и fit будут остановлены, модель выгружена, активная сборка отменена.",QMessageBox::NoButton,this);question.setObjectName("exitConfirmation");
         auto yes=new StudioButton("Да");yes->setObjectName("exitYes");auto no=new StudioButton("Нет");no->setObjectName("exitNo");question.addButton(yes,QMessageBox::YesRole);question.addButton(no,QMessageBox::NoRole);question.setDefaultButton(no);question.setEscapeButton(no);question.exec();closeQuestionOpen=false;
         if(question.clickedButton()!=yes){event->ignore();return;}
-        closeConfirmed=true;stopping=true;fitCanceled=true;healthTimer.stop();centralWidget()->setEnabled(false);
+        closeConfirmed=true;launchAfterPower=false;stopping=true;fitCanceled=true;healthTimer.stop();centralWidget()->setEnabled(false);for(auto dialog:findChildren<QDialog*>())dialog->setEnabled(false);
     }
     if(buildPage->busy()){closeAfterBuild=true;buildPage->cancel();event->ignore();return;}
     if (server.state() != QProcess::NotRunning || fit.state() != QProcess::NotRunning) {
         server.killTree();fit.killTree();event->ignore();QTimer::singleShot(50,this,&QWidget::close);return;
     }
     server.killTree();fit.killTree();
+    if(!powerResetDone&&power.needsReset()){event->ignore();if(!powerResetStarted){powerResetStarted=true;power.restoreAllDefaults();}return;}
     for(auto dialog:findChildren<QDialog*>(QString(),Qt::FindDirectChildrenOnly))dialog->close();
     event->accept();
 }
