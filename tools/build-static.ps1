@@ -57,6 +57,11 @@ foreach ($relative in @('resources\parameters.json', 'resources\build-commands.j
     Copy-Item -LiteralPath (Join-Path $projectRoot $relative) -Destination $outputPath
 }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'resources\licenses') -Destination $outputPath -Recurse -Force
+$screenshotsPath = Join-Path $outputPath 'docs\screenshots'
+New-Item -ItemType Directory -Force -Path $screenshotsPath | Out-Null
+foreach ($name in @('parameters.png','build.png')) {
+    Copy-Item -LiteralPath (Join-Path $projectRoot "docs\screenshots\$name") -Destination $screenshotsPath -Force
+}
 Copy-Item -LiteralPath (Join-Path $sourceRoot 'LICENSE') -Destination (Join-Path $outputPath 'OpenSSL-LICENSE.txt')
 $imports = & (Join-Path $CompilerBin 'objdump.exe') -p $exe | Select-String 'DLL Name:'
 Check-Exit 'Read imports'

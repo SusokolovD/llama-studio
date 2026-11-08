@@ -5,8 +5,11 @@ BuilderPage::BuilderPage(QWidget *parent):QWidget(parent),service(this) {
     auto root=new QVBoxLayout(this);root->setContentsMargins(0,0,0,0);
     auto hint=new QLabel("Обновление исходников → сборка → установка в отдельную llama-build. Настройки сохраняются вместе с JSON-конфигом.");hint->setWordWrap(true);root->addWidget(hint);
     fields=new QWidget;auto form=new QFormLayout(fields);form->setContentsMargins(0,6,0,6);
+    repository=new QLineEdit;repository->setObjectName("buildRepository");repository->setPlaceholderText("URL форка или имя remote; пусто — настроенный upstream");form->addRow("Репозиторий llama.cpp",repository);
+    branch=new QLineEdit;branch->setObjectName("buildBranch");branch->setPlaceholderText("Необязательно: main, master и т.п.; пусто — HEAD репозитория");form->addRow("Ветка репозитория",branch);
     auto pathRow=[&](const QString &label,QLineEdit **field,const QString &name){auto container=new QWidget;auto row=new QHBoxLayout(container);row->setContentsMargins(0,0,0,0);auto edit=new QLineEdit;edit->setObjectName(name);row->addWidget(edit,1);auto browse=new StudioButton("Обзор…");row->addWidget(browse);*field=edit;form->addRow(label,container);connect(browse,&QPushButton::clicked,this,[this,edit]{auto p=QFileDialog::getExistingDirectory(this,"Выберите папку",edit->text());if(!p.isEmpty())edit->setText(QDir::toNativeSeparators(p));});};
     pathRow("Исходники (Git-репозиторий)",&source,"buildSource");source->setPlaceholderText("Папка с .git и CMakeLists.txt");
+    auto repositoryHint=new QLabel("Укажите существующий локальный клон нужного форка. Pull получает изменения из указанного репозитория и применяет их к текущей локальной ветке. Пустой URL использует её настроенный upstream. Remote и локальная ветка автоматически не меняются.");repositoryHint->setWordWrap(true);form->addRow(repositoryHint);
     pathRow("Готовые бинарники сборки",&binary,"buildBinary");binary->setPlaceholderText("build/bin/Release или абсолютный путь к папке с exe и DLL");
     pathRow("Установить в (llama-build)",&target,"buildTarget");
     auto recipeTools=new QWidget;auto tools=new QHBoxLayout(recipeTools);tools->setContentsMargins(0,0,0,0);
@@ -21,7 +24,7 @@ BuilderPage::BuilderPage(QWidget *parent):QWidget(parent),service(this) {
     state=new QLabel("Готово к запуску. Git pull выполняется с --ff-only; локальные изменения не сбрасываются.");state->setWordWrap(true);state->setTextFormat(Qt::PlainText);root->addWidget(state);
     log=new QPlainTextEdit;log->setReadOnly(true);log->setMaximumBlockCount(12000);log->setMinimumHeight(80);log->setPlaceholderText("Журнал обновления, сборки и копирования. Размер панелей можно менять разделителем.");split->addWidget(log);split->setSizes({390,140});
     connect(startButton,&QPushButton::clicked,this,&BuilderPage::startRequested);connect(cancelButton,&QPushButton::clicked,&service,&BuildService::cancel);
-    for(auto edit:{source,binary,target})connect(edit,&QLineEdit::textChanged,this,[this]{emit settingsChanged(settings().toJson());});
+    for(auto edit:{repository,branch,source,binary,target})connect(edit,&QLineEdit::textChanged,this,[this]{emit settingsChanged(settings().toJson());});
     connect(commands,&QPlainTextEdit::textChanged,this,[this]{QVector<BuildCommand> parsed;QString why;bool ok=BuildRecipe::parse(commands->toPlainText().toUtf8(),&parsed,&why);recipeState->setText(ok?QString("JSON корректен: команд %1").arg(parsed.size()):why);emit settingsChanged(settings().toJson());});
     connect(&service,&BuildService::output,this,[this](const QString &s){auto cursor=log->textCursor();cursor.movePosition(QTextCursor::End);cursor.insertText(s);log->setTextCursor(cursor);log->ensureCursorVisible();});
     connect(&service,&BuildService::phaseChanged,state,&QLabel::setText);
@@ -31,9 +34,9 @@ BuilderPage::BuilderPage(QWidget *parent):QWidget(parent),service(this) {
 }
 void BuilderPage::loadSettings(const QJsonObject &json){
     auto s=BuildSettings::fromJson(json);
-    for(auto edit:{source,binary,target})edit->blockSignals(true);commands->blockSignals(true);
-    source->setText(s.sourceDirectory);binary->setText(s.binaryDirectory);target->setText(s.targetDirectory);commands->setPlainText(s.commands);
-    for(auto edit:{source,binary,target})edit->blockSignals(false);commands->blockSignals(false);
+    for(auto edit:{repository,branch,source,binary,target})edit->blockSignals(true);commands->blockSignals(true);
+    repository->setText(s.repositoryUrl);branch->setText(s.repositoryBranch);source->setText(s.sourceDirectory);binary->setText(s.binaryDirectory);target->setText(s.targetDirectory);commands->setPlainText(s.commands);
+    for(auto edit:{repository,branch,source,binary,target})edit->blockSignals(false);commands->blockSignals(false);
     QVector<BuildCommand> parsed;QString why;bool ok=BuildRecipe::parse(s.commands.toUtf8(),&parsed,&why);recipeState->setText(ok?QString("JSON корректен: команд %1").arg(parsed.size()):why);
 }
 bool BuilderPage::loadRecipeFile(const QString &path,QString *error){
@@ -45,5 +48,5 @@ bool BuilderPage::saveRecipeFile(const QString &path,QString *error) const{
     auto data=commands->toPlainText().toUtf8();if(!BuildRecipe::parse(data,nullptr,error))return false;data=QJsonDocument::fromJson(data).toJson(QJsonDocument::Indented);
     QSaveFile file(path);if(!file.open(QIODevice::WriteOnly)||file.write(data)!=data.size()||!file.commit()){if(error)*error=file.errorString();return false;}return true;
 }
-BuildSettings BuilderPage::settings() const{return {source->text().trimmed(),binary->text().trimmed(),target->text().trimmed(),commands->toPlainText()};}
+BuildSettings BuilderPage::settings() const{return {source->text().trimmed(),binary->text().trimmed(),target->text().trimmed(),commands->toPlainText(),repository->text().trimmed(),branch->text().trimmed()};}
 void BuilderPage::start(){QString message;if(!service.start(settings(),&message))state->setText(message);}

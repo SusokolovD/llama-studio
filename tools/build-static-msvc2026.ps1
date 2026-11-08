@@ -47,4 +47,9 @@ foreach ($relative in @('resources\parameters.json','resources\build-commands.js
     Copy-Item -LiteralPath (Join-Path $projectRoot $relative) -Destination $outputPath -Force
 }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'resources\licenses') -Destination $outputPath -Recurse -Force
+$screenshotsPath = Join-Path $outputPath 'docs\screenshots'
+New-Item -ItemType Directory -Force -Path $screenshotsPath | Out-Null
+foreach ($name in @('parameters.png','build.png')) {
+    Copy-Item -LiteralPath (Join-Path $projectRoot "docs\screenshots\$name") -Destination $screenshotsPath -Force
+}
 Write-Output "MSVC 2026 x64 static build: $outputPath\LlamaStudio.exe"

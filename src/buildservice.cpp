@@ -93,14 +93,17 @@ BuildSettings BuildSettings::fromJson(const QJsonObject &j) {
     else if(j.value("commands").isArray())recipe=BuildRecipe::format({{"schemaVersion",1},{"commands",j.value("commands")}});
     else if(j.value("commands").isString())recipe=BuildRecipe::fromLegacy(j.value("commands").toString());
     else recipe=BuildRecipe::defaults();
-    return {j.value("sourceDirectory").toString(),j.value("binaryDirectory").toString("build/bin/Release"),j.value("targetDirectory").toString(QDir(QCoreApplication::applicationDirPath()).filePath("llama-build")),recipe};
+    return {j.value("sourceDirectory").toString(),j.value("binaryDirectory").toString("build/bin/Release"),j.value("targetDirectory").toString(QDir(QCoreApplication::applicationDirPath()).filePath("llama-build")),recipe,j.value("repositoryUrl").toString(),j.value("repositoryBranch").toString()};
 }
 QJsonObject BuildSettings::toJson() const{
-    QJsonObject result{{"sourceDirectory",sourceDirectory},{"binaryDirectory",binaryDirectory},{"targetDirectory",targetDirectory}};
+    QJsonObject result{{"sourceDirectory",sourceDirectory},{"binaryDirectory",binaryDirectory},{"targetDirectory",targetDirectory},{"repositoryUrl",repositoryUrl},{"repositoryBranch",repositoryBranch}};
     auto doc=QJsonDocument::fromJson(commands.toUtf8());if(doc.isObject())result["recipe"]=doc.object();else result["recipeText"]=commands;return result;
 }
 bool BuildSettings::validate(QString *error) const {
     auto fail=[&](const QString &message){if(error)*error=message;return false;};
+    const auto repository=repositoryUrl.trimmed(),branch=repositoryBranch.trimmed();
+    for(const auto &value:{repository,branch})if(value.startsWith('-')||value.contains(QChar(0))||value.contains('\n')||value.contains('\r'))return fail("Репозиторий и ветка не должны начинаться с «-» или содержать управляющие символы.");
+    if(repository.isEmpty()&&!branch.isEmpty())return fail("Для выбора ветки укажите URL репозитория или имя remote.");
     if(sourceDirectory.trimmed().isEmpty()||!QFileInfo(sourceDirectory).isDir()||!QFileInfo(QDir(sourceDirectory).filePath(".git")).exists()||!QFileInfo(QDir(sourceDirectory).filePath("CMakeLists.txt")).isFile())return fail("Укажите корень Git-репозитория исходников llama.cpp с CMakeLists.txt.");
     if(binaryDirectory.trimmed().isEmpty()||targetDirectory.trimmed().isEmpty()||!QFileInfo(targetDirectory).isAbsolute())return fail("Укажите папку готовых бинарников и абсолютный путь к папке назначения.");
     const QString source=resolvedPath(sourceDirectory),binary=absoluteBinary(*this),target=resolvedPath(targetDirectory);
@@ -127,7 +130,7 @@ bool BuildService::start(const BuildSettings &s,QString *error) {
 void BuildService::next() {
     if(canceled->load()){complete(false,"Сборка отменена.");return;}
     QString program;QStringList args;
-    if(step==0){program="git";args=QStringList{"-C",settings.sourceDirectory,"pull","--ff-only"};emit phaseChanged("Обновление исходников · git pull --ff-only");}
+    if(step==0){program="git";args=QStringList{"-C",settings.sourceDirectory,"pull","--ff-only"};if(!settings.repositoryUrl.trimmed().isEmpty()){args<<"--"<<settings.repositoryUrl.trimmed();if(!settings.repositoryBranch.trimmed().isEmpty())args<<settings.repositoryBranch.trimmed();}emit phaseChanged("Обновление исходников · git pull --ff-only");}
     else if(step<=commands.size()){const auto &command=commands[step-1];program=command.program;args=command.arguments;emit phaseChanged(QString("Сборка · команда %1 из %2").arg(step).arg(commands.size()));}
     else {deploy();return;}
     ++step;emit output("\n> "+Config::displayCommand(program,args,false)+"\n");process.setWorkingDirectory(settings.sourceDirectory);process.start(program,args);

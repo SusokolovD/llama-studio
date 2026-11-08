@@ -20,7 +20,7 @@ signals:
     void deployed(const QString &directory);
 private:
     BuildService service;
-    QLineEdit *source,*binary,*target;
+    QLineEdit *repository,*branch,*source,*binary,*target;
     QPlainTextEdit *commands,*log;
     QLabel *state;
     QLabel *recipeState;

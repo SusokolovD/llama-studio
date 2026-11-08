@@ -8,6 +8,7 @@
 #include "buildrecipe.h"
 struct BuildSettings {
     QString sourceDirectory, binaryDirectory, targetDirectory, commands;
+    QString repositoryUrl, repositoryBranch;
     static BuildSettings fromJson(const QJsonObject &json);
     QJsonObject toJson() const;
     bool validate(QString *error) const;
