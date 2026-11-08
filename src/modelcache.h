@@ -11,11 +11,12 @@ public:
     QVector<ModelInfo> allModels()const;
     QStringList directories()const;
     static QString loadPath(const ModelInfo &info);
+    void setRole(const QString &path,const QString &role);
     void setDirectory(const QString &path,bool recursive,const QVector<ModelInfo> &models);
     bool save(QString *error=nullptr);
 private:
     QString filePath;
     QJsonObject data;
-    QSet<QString> changedModels,changedDirectories;
+    QSet<QString> changedModels,changedDirectories,changedRoles;
 };
 ModelInfo cachedModelInfo(const QString &path,bool force=false,QString *cacheError=nullptr);

@@ -89,6 +89,15 @@ QVector<DeviceInfo> parseDevices(const QString &output) {
     }
     return devices;
 }
+QString modelRole(const ModelInfo &m){
+    if(QStringList{"--model","--mmproj","--spec-draft-model"}.contains(m.userRole))return m.userRole;
+    if(!m.error.isEmpty())return {};
+    const auto type=m.modelType.toLower(),arch=m.architecture.toLower(),name=QFileInfo(m.path).fileName().toLower();
+    if(type=="projector"||type=="mmproj"||arch=="clip"||arch=="siglip"||name.contains("mmproj")||name.startsWith("projector"))return "--mmproj";
+    if(type=="draft"||type=="mtp"||arch.endsWith("-mtp")||arch.endsWith("_mtp")||QRegularExpression("(?:^|[._ -])(?:draft|mtp)(?:[._ -]|$)").match(name).hasMatch())return "--spec-draft-model";
+    return "--model";
+}
+QString modelRoleLabel(const QString &role){if(role=="--mmproj")return "Графика (mmproj)";if(role=="--spec-draft-model")return "Draft";return "Основная";}
 Advice makeAdvice(const AdviceInput &in) {
     Advice out;
     auto put=[&](QString name,QJsonValue value,bool enabled=true) { out.changes.append({name,value,enabled}); };

@@ -15,7 +15,7 @@ public:
 private:
     QVector<ModelInfo> models;
     QLineEdit *filter;
-    QComboBox *source;
+    QComboBox *source,*typeFilter;
     QTableWidget *table;
     QLabel *status;
     QPushButton *use;

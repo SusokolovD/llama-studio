@@ -34,6 +34,7 @@ private:
     bool profilePending=false,resetPending=false;
     QMap<QString,double> queue;
     QSet<QString> touched;
+    QMap<QString,double> uncertainOriginal;
     QStringList batchErrors;
     QString executable,target,processError;
     double requested=-1;

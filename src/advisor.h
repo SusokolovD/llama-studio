@@ -3,7 +3,7 @@
 #include <QMap>
 #include <QMetaType>
 struct ModelInfo {
-    QString path, name, architecture, error, sizeLabel, modelType;
+    QString path, name, architecture, error, sizeLabel, modelType, userRole;
     qint64 fileType = -1, shardIndex = 0;
     qint64 fileBytes = 0, trainingContext = 0, layers = 0, heads = 0, kvHeads = 0, embedding = 0, shards = 1;
     bool hasChatTemplate = false;
@@ -11,6 +11,8 @@ struct ModelInfo {
 };
 Q_DECLARE_METATYPE(ModelInfo)
 QString modelQuantization(qint64 fileType);
+QString modelRole(const ModelInfo &info);
+QString modelRoleLabel(const QString &role);
 struct DeviceInfo { QString id, name; qint64 freeMiB = 0, totalMiB = 0; };
 struct AdviceInput {
     bool agent = false, cpuOnly = false, hasExtras = false;

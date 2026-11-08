@@ -13,9 +13,13 @@ GpuPowerService::GpuPowerService(QObject *parent,const QString &program):QObject
         if(cards.isEmpty()){finish(false,"Драйвер не вернул параметры мощности. Проверьте поддержку nvidia-smi и видеокарты.");return;}
         if(phase==Read){finish(true,"Параметры мощности обновлены. Изменения выполняются только кнопками применения.");return;}
         const auto card=selected();if(!card||!card->adjustable()){finish(false,"У выбранной GPU недоступен диапазон изменения мощности. Лимит не отправлен или не удалось подтвердить результат.");return;}
-        if(phase==PrepareWrite){if(factory)requested=card->defaultLimit;if(!std::isfinite(requested)||requested<card->minimum||requested>card->maximum){finish(false,"Лимит вне диапазона, который сейчас сообщает драйвер. Обновите показания.");return;}begin(Write);return;}
+        if(phase==PrepareWrite){if(factory)requested=card->defaultLimit;if(!std::isfinite(requested)||requested<card->minimum||requested>card->maximum){finish(false,"Лимит вне диапазона, который сейчас сообщает драйвер. Обновите показания.");return;}
+            if(batch==ResetBatch&&uncertainOriginal.contains(target)&&std::abs(card->limit-uncertainOriginal.value(target))<=0.5){touched.remove(target);uncertainOriginal.remove(target);finish(true,"Лимит не изменился после неудачной команды; сброс не требуется.");return;}
+            if(factory&&std::abs(card->limit-requested)<=0.5){touched.remove(target);uncertainOriginal.remove(target);if(batch!=ResetBatch){profileLimits[target]=card->limit;emit limitApplied(target,card->limit);}finish(true,"Заводской лимит уже установлен; запись не требуется.");return;}
+            begin(Write);return;}
         if(std::abs(card->limit-requested)>0.5){finish(false,QString("Запрошено %1 Вт, драйвер сообщает %2 Вт. Изменение не подтверждено.").arg(requested,0,'f',1).arg(card->limit,0,'f',1));return;}
         if(card->defaultLimit>0&&std::abs(card->limit-card->defaultLimit)<=0.5)touched.remove(target);
+        uncertainOriginal.remove(target);
         if(batch!=ResetBatch){profileLimits[target]=card->limit;emit limitApplied(target,card->limit);}
         finish(true,QString("GPU %1: подтверждён лимит %2 Вт. Для сравнения скорости выполните новый такой же запрос к модели.").arg(target).arg(card->limit,0,'f',1));
     });
@@ -25,7 +29,7 @@ const GpuPowerInfo *GpuPowerService::selected()const{for(const auto &card:cards)
 void GpuPowerService::finish(bool success,const QString &message){timeout.stop();phase=Idle;if(!success&&batch!=NoBatch)batchErrors<<target+": "+message;emit busyChanged(busy());emit completed(success,message);QTimer::singleShot(0,this,&GpuPowerService::next);}
 void GpuPowerService::begin(Phase next){
     phase=next;output.clear();processError.clear();QStringList args;
-    if(next==Write){touched.insert(target);args=QStringList{"-i",target,"-pl",QString::number(requested,'f',1)};}
+    if(next==Write){if(!touched.contains(target)&&selected())uncertainOriginal[target]=selected()->limit;touched.insert(target);args=QStringList{"-i",target,"-pl",QString::number(requested,'f',1)};}
     else args=QStringList{"--query-gpu=uuid,name,power.draw,power.limit,power.default_limit,power.min_limit,power.max_limit,temperature.gpu,utilization.gpu","--format=csv,noheader,nounits"};
     timeout.start(5000);process.start(executable,args);
 }

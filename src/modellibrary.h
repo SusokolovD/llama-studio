@@ -29,7 +29,7 @@ private:
     QLineEdit *directory,*filter;
     QTableWidget *table;
     QCheckBox *recursive,*force;
-    QComboBox *role;
+    QComboBox *role,*targetRole;
     QLabel *status;
     QPushButton *refresh,*cancel,*use;
     ModelScan scan;
@@ -39,4 +39,5 @@ private:
     void filterRows();
     void selectModel();
     bool loadCachedDirectory();
+    void assignRole(const QString &role);
 };

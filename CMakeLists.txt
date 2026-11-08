@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(LlamaStudio VERSION 0.9.1 LANGUAGES CXX)
+project(LlamaStudio VERSION 0.9.2 LANGUAGES CXX)
 configure_file(src/version.h.in generated/version.h @ONLY)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
