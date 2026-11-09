@@ -53,7 +53,7 @@ $exe = Join-Path $outputPath 'LlamaStudio.exe'
 Copy-Item -LiteralPath (Join-Path $buildRoot 'LlamaStudio.exe') -Destination $exe
 & (Join-Path $CompilerBin 'strip.exe') --strip-unneeded $exe
 Check-Exit 'Strip'
-foreach ($relative in @('resources\parameters.json', 'resources\build-commands.json', 'resources\llama.cpp-LICENSE', 'README.md', 'ROADMAP.md', 'STATIC-BUILD.md', 'THIRD-PARTY-NOTICES.md', 'CHANGELOG.md')) {
+foreach ($relative in @('resources\parameters.json', 'resources\build-commands.json','resources\image-profiles.json', 'resources\llama.cpp-LICENSE', 'README.md', 'ROADMAP.md', 'STATIC-BUILD.md', 'THIRD-PARTY-NOTICES.md', 'CHANGELOG.md')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot $relative) -Destination $outputPath
 }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'resources\licenses') -Destination $outputPath -Recurse -Force

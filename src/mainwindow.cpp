@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "advisordialog.h"
 #include "builderpage.h"
+#include "imagepage.h"
 #include "modellibrary.h"
 #include "modelpicker.h"
 #include "monitordialog.h"
@@ -37,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent, bool checkUpdatesOnStartup,bool restoreL
     buildUi(); rebuild(); updatePreview();
     power.profileLimits=config.metadata.value("gpuPowerLimits").toObject();
     connect(&power,&GpuPowerService::limitApplied,this,[this](const QString &uuid,double watts){auto limits=config.metadata.value("gpuPowerLimits").toObject();limits[uuid]=watts;config.metadata["gpuPowerLimits"]=limits;const auto path=windowFilePath();if(path.isEmpty()){log("[Лимит GPU обновлён. Сохраните JSON-профиль кнопкой «Сохранить как…».]\n");return;}QFile original(path);Config disk;QString reason;if(!original.open(QIODevice::ReadOnly)||!disk.load(original.readAll(),&reason)){error("Лимит GPU применён, но не сохранён в профиль: "+(reason.isEmpty()?original.errorString():reason));return;}original.close();disk.metadata["gpuPowerLimits"]=limits;QSaveFile file(path);const auto bytes=disk.save();if(!file.open(QIODevice::WriteOnly)||file.write(bytes)!=bytes.size()||!file.commit())error("Лимит GPU применён, но не сохранён в профиль: "+file.errorString());});
-    connect(&power,&GpuPowerService::profileFinished,this,[this](bool success,const QString &message){if(!launchAfterPower)return;launchAfterPower=false;if(success&&!closeConfirmed){powerReady=true;launchServer();powerReady=false;}else{status->setText("Лимиты GPU не применены");log("["+message+"]\n");}updateButtons();});
+    connect(&power,&GpuPowerService::profileFinished,this,[this](bool success,const QString &message){if(!launchAfterPower)return;const auto image=launchImageAfterPower;launchAfterPower=false;launchImageAfterPower=false;if(success&&!closeConfirmed){powerReady=true;if(image)launchImageServer();else launchServer();powerReady=false;}else{status->setText("Лимиты GPU не применены");log("["+message+"]\n");}updateButtons();});
     connect(&power,&GpuPowerService::resetFinished,this,[this](bool success,const QString &message){if(!powerResetStarted)return;if(success){powerResetDone=true;QTimer::singleShot(0,this,&QWidget::close);return;}
         log("[Не удалось сбросить лимиты GPU: "+message+"]\n");QMessageBox question(QMessageBox::Warning,"Не удалось сбросить мощность GPU","Драйвер не подтвердил заводские лимиты. Можно остаться в программе для повторной попытки или выйти без сброса. При выходе изменённые лимиты могут сохраниться.\n\n"+message,QMessageBox::NoButton,this);question.setObjectName("powerResetExitChoice");auto leave=new StudioButton("Выйти без сброса");leave->setObjectName("exitWithoutPowerReset");auto stay=new StudioButton("Остаться");stay->setObjectName("stayAfterPowerResetFailure");question.addButton(leave,QMessageBox::DestructiveRole);question.addButton(stay,QMessageBox::RejectRole);question.setDefaultButton(stay);question.setEscapeButton(stay);question.exec();
         if(question.clickedButton()==leave){powerResetDone=true;QTimer::singleShot(0,this,&QWidget::close);}else{powerResetStarted=false;closeConfirmed=false;centralWidget()->setEnabled(true);for(auto dialog:findChildren<QDialog*>())dialog->setEnabled(true);updateButtons();}});
@@ -88,13 +89,15 @@ void MainWindow::buildUi() {
     auto emblem=new QLabel;emblem->setPixmap(QPixmap(":/app-icon.png").scaled(58,58,Qt::KeepAspectRatio,Qt::SmoothTransformation));header->addWidget(emblem);
     auto titles = new QVBoxLayout;auto titleRow=new QHBoxLayout;auto title = new QLabel("Llama Studio"); title->setObjectName("title");titleRow->addWidget(title);auto version=new QLabel(STUDIO_VERSION);version->setObjectName("version");titleRow->addWidget(version);titleRow->addStretch();titles->addLayout(titleRow);
     auto sub = new QLabel("Локальные модели. Полный контроль над запуском."); sub->setObjectName("subtitle"); titles->addWidget(sub); header->addLayout(titles); header->addStretch();
-    status = new QLabel("Сервер остановлен"); status->setObjectName("status"); header->addWidget(status); main->addLayout(header);
+    status = new QLabel("Сервер остановлен"); status->setObjectName("status");status->setWordWrap(true);status->setMaximumWidth(420); header->addWidget(status); main->addLayout(header);
     auto toolbar = new QHBoxLayout;
     connect(button("Открыть конфиг", toolbar), &QPushButton::clicked, this, [this] { loadFile(); });
     connect(button("Сохранить как…", toolbar), &QPushButton::clicked, this, &MainWindow::saveFile);
-    connect(button("Загрузить каталог JSON", toolbar), &QPushButton::clicked, this, [this] { loadFile(true); });
-    connect(button("Сбросить", toolbar), &QPushButton::clicked, this, &MainWindow::reset);
-    connect(button("Помощник настройки", toolbar), &QPushButton::clicked, this, &MainWindow::showAdvisor); toolbar->addStretch(); main->addLayout(toolbar);
+    auto catalogTool=button("Загрузить каталог JSON",toolbar);connect(catalogTool,&QPushButton::clicked,this,[this]{loadFile(true);});
+    auto resetTool=button("Сбросить",toolbar);connect(resetTool,&QPushButton::clicked,this,&MainWindow::reset);
+    auto advisorTool=button("Помощник настройки",toolbar);connect(advisorTool,&QPushButton::clicked,this,&MainWindow::showAdvisor);toolbar->addStretch();main->addLayout(toolbar);
+    auto engines=new QHBoxLayout;engines->addWidget(new QLabel("Движок:"));engineSelector=new QComboBox;engineSelector->setObjectName("engineSelector");engineSelector->addItem("llama.cpp · чат и кодинг","llama.cpp");engineSelector->addItem("stable-diffusion.cpp · изображения","stable-diffusion.cpp");engines->addWidget(engineSelector);engines->addWidget(new QLabel("Одна модель за раз; перед переключением остановите сервер."),1);main->addLayout(engines);
+    enginePages=new QStackedWidget;main->addWidget(enginePages,1);auto llamaPane=new QWidget;enginePages->addWidget(llamaPane);main=new QVBoxLayout(llamaPane);main->setContentsMargins(0,0,0,0);main->setSpacing(14);
     auto updates = new QHBoxLayout;
     connect(button("Каталог моделей",updates,"modelLibraryButton"),&QPushButton::clicked,this,&MainWindow::showModels);
     connect(button("Мониторинг",updates,"hardwareMonitorButton"),&QPushButton::clicked,this,&MainWindow::showMonitor);
@@ -137,7 +140,7 @@ void MainWindow::buildUi() {
     buildPage=new BuilderPage;buildPage->loadSettings(config.metadata.value("build").toObject());tabs->addTab(buildPage,"Сборка llama.cpp");
     config.metadata["build"]=buildPage->settings().toJson();
     connect(buildPage,&BuilderPage::settingsChanged,this,[this](const QJsonObject &s){config.metadata["build"]=s;});
-    connect(buildPage,&BuilderPage::startRequested,this,[this]{if(server.state()!=QProcess::NotRunning||fit.state()!=QProcess::NotRunning){error("Остановите сервер и fit перед обновлением бинарников.");return;}buildPage->start();});
+    connect(buildPage,&BuilderPage::startRequested,this,[this]{if(server.state()!=QProcess::NotRunning||fit.state()!=QProcess::NotRunning||imagePage->server()->busy()||launchAfterPower){error("Остановите сервер и fit перед обновлением бинарников.");return;}buildPage->start();});
     connect(buildPage,&BuilderPage::busyChanged,this,[this](bool busy){directory->setEnabled(!busy);updateButtons();if(!busy&&closeAfterBuild)QTimer::singleShot(0,this,&QWidget::close);});
     connect(buildPage,&BuilderPage::deployed,this,[this](const QString &path){directory->setText(path);status->setText("llama.cpp обновлён");});
     auto bottom = new QHBoxLayout; bottom->addWidget(new QLabel("Контекст для fit:")); context = new QSpinBox; context->setRange(0, 2147483647);context->setSpecialValueText("0 — авто / максимум модели");context->setToolTip("0 передаёт --ctx-size 0: fit выбирает контекст до предела модели с учётом памяти. Для фиксированного контекста задайте положительное число."); context->setValue(config.fitContext); context->setSingleStep(1024); bottom->addWidget(context);
@@ -153,6 +156,12 @@ void MainWindow::buildUi() {
     navigation->setCurrentRow(0);
     connect(navigation, &QListWidget::currentRowChanged, this, [this] { rebuild(); });
     connect(search, &QLineEdit::textChanged, this, [this] { rebuild(); });
+    imagePage=new ImagePage;enginePages->addWidget(imagePage);imagePage->loadSettings(config.metadata.value("imageGeneration").toObject());config.metadata["imageGeneration"]=imagePage->settings().toJson();
+    connect(imagePage,&ImagePage::settingsChanged,this,[this](const QJsonObject &settings){config.metadata["imageGeneration"]=settings;});
+    connect(imagePage,&ImagePage::startRequested,this,&MainWindow::launchImageServer);connect(imagePage,&ImagePage::monitorRequested,this,&MainWindow::showMonitor);
+    connect(imagePage->server(),&ImageServer::changed,this,[this]{if(engineSelector->currentIndex()==1)status->setText(imagePage->server()->ready()?"Модель изображений готова":imagePage->server()->busy()?"sd-server · "+imagePage->server()->status():imagePage->server()->status());updateButtons();});
+    const auto selectEngine=[this,catalogTool,resetTool,advisorTool]{const bool image=engineSelector->currentIndex()==1;enginePages->setCurrentIndex(image?1:0);config.metadata["engine"]=engineSelector->currentData().toString();for(auto widget:{catalogTool,resetTool,advisorTool})widget->setEnabled(!image);status->setText(image?imagePage->server()->status():"Сервер остановлен");};
+    connect(engineSelector,qOverload<int>(&QComboBox::currentIndexChanged),this,selectEngine);engineSelector->setCurrentIndex(config.metadata.value("engine").toString()=="stable-diffusion.cpp"?1:0);selectEngine();
 }
 void MainWindow::rebuild() {
     auto body = new QWidget; auto rows = new QVBoxLayout(body); rows->setContentsMargins(12, 0, 6, 0); rows->setSpacing(9);
@@ -239,7 +248,7 @@ void MainWindow::updatePreview() {
 }
 void MainWindow::updateButtons() {
     bool s = server.state() != QProcess::NotRunning, f = fit.state() != QProcess::NotRunning;
-    bool building=buildPage&&buildPage->busy();startButton->setEnabled(!s && !f&&!building&&!launchAfterPower); stopButton->setEnabled(s); fitButton->setEnabled(!s && !f&&!building&&!launchAfterPower); cancelFitButton->setEnabled(f); openButton->setEnabled(s && !stopping);
+    const bool image=imagePage&&imagePage->server()->busy();bool building=buildPage&&buildPage->busy();startButton->setEnabled(!s && !f&&!building&&!image&&!launchAfterPower); stopButton->setEnabled(s); fitButton->setEnabled(!s && !f&&!building&&!image&&!launchAfterPower); cancelFitButton->setEnabled(f); openButton->setEnabled(s && !stopping);if(engineSelector)engineSelector->setEnabled(!s&&!f&&!image&&!building&&!launchAfterPower);if(imagePage)imagePage->setBlocked(s||f||building||launchAfterPower);
 }
 void MainWindow::error(const QString &text) { QMessageBox::warning(this, "Llama Studio", text); }
 void MainWindow::log(const QString &text) { auto cursor = console->textCursor(); cursor.movePosition(QTextCursor::End); cursor.insertText(text); console->setTextCursor(cursor); console->ensureCursorVisible(); }
@@ -254,19 +263,20 @@ void MainWindow::readLog(QProcess &process, bool out, QByteArray &pending, bool 
     if (finish || pending.size() > 65536) {auto line=QString::fromUtf8(pending);if(&process==&server)performance.readLine(line);log(line);pending.clear();}
 }
 void MainWindow::loadFile(bool catalog) {
-    if (fit.state() != QProcess::NotRunning||buildPage->busy()) { error("Дождитесь завершения подбора/сборки или отмените их."); return; }
+    if (server.state()!=QProcess::NotRunning||fit.state() != QProcess::NotRunning||buildPage->busy()||imagePage->server()->busy()||launchAfterPower) { error("Остановите сервер и дождитесь завершения подбора/сборки или отмените их."); return; }
     auto path = QFileDialog::getOpenFileName(this, catalog ? "Каталог параметров" : "Конфигурация", {}, "JSON (*.json)"); if (path.isEmpty()) return;
     QString message;if(!loadProfile(path,&message,catalog))error(message);
 }
 bool MainWindow::loadProfile(const QString &path,QString *message,bool catalog){
-    if(fit.state()!=QProcess::NotRunning||buildPage->busy()){if(message)*message="Дождитесь завершения подбора/сборки.";return false;}
+    if(server.state()!=QProcess::NotRunning||fit.state()!=QProcess::NotRunning||buildPage->busy()||imagePage->server()->busy()||launchAfterPower){if(message)*message="Остановите сервер и дождитесь завершения подбора/сборки.";return false;}
     QFile file(path);Config next;QString reason;if(!file.open(QIODevice::ReadOnly))reason=file.errorString();else if(next.load(file.readAll(),&reason))reason.clear();else if(reason.isEmpty())reason="Неверный JSON профиля.";
     if(!reason.isEmpty()){if(message)*message="Не удалось загрузить профиль: "+reason;return false;}
-    if (catalog) { next.directory = config.directory; next.fitContext = config.fitContext;next.metadata["build"]=config.metadata.value("build");next.metadata["gpuPowerLimits"]=config.metadata.value("gpuPowerLimits"); }
+    if (catalog) { next.directory = config.directory; next.fitContext = config.fitContext;next.metadata["build"]=config.metadata.value("build");next.metadata["gpuPowerLimits"]=config.metadata.value("gpuPowerLimits");next.metadata["imageGeneration"]=config.metadata.value("imageGeneration");next.metadata["engine"]=config.metadata.value("engine"); }
     config = next; directory->setText(config.directory); context->setValue(config.fitContext);
     power.profileLimits=config.metadata.value("gpuPowerLimits").toObject();
     buildPage->loadSettings(config.metadata.value("build").toObject());
     config.metadata["build"]=buildPage->settings().toJson();
+    imagePage->loadSettings(config.metadata.value("imageGeneration").toObject());config.metadata["imageGeneration"]=imagePage->settings().toJson();engineSelector->setCurrentIndex(config.metadata.value("engine").toString()=="stable-diffusion.cpp"?1:0);
     navigation->blockSignals(true); navigation->clear(); navigation->addItem("Частые параметры"); navigation->addItem("Модели и адаптеры");
     for (auto group : config.metadata.value("groups").toArray()) navigation->addItem(groupLabel(group.toString()));
     navigation->addItem("Включённые параметры"); navigation->setCurrentRow(0); navigation->blockSignals(false); rebuild(); updatePreview();
@@ -283,7 +293,7 @@ void MainWindow::reset() {
     rebuild(); updatePreview();
 }
 void MainWindow::showAdvisor() {
-    if(server.state()!=QProcess::NotRunning || fit.state()!=QProcess::NotRunning||buildPage->busy()){error("Остановите сервер и дождитесь завершения fit/сборки перед настройкой.");return;}
+    if(server.state()!=QProcess::NotRunning || fit.state()!=QProcess::NotRunning||buildPage->busy()||imagePage->server()->busy()){error("Остановите сервер и дождитесь завершения fit/сборки перед настройкой.");return;}
     AdvisorDialog dialog(config,this);
     if(dialog.exec()!=QDialog::Accepted)return;
     QString message;
@@ -298,7 +308,7 @@ void MainWindow::showModels(){
     auto dialog=new ModelLibraryDialog(folder,this);dialog->setAttribute(Qt::WA_DeleteOnClose);
     connect(dialog,&ModelLibraryDialog::directoryChanged,this,[this](const QString &path){config.metadata["modelLibraryDirectory"]=path;QSettings().setValue("modelLibraryDirectory",path);});
     connect(dialog,&ModelLibraryDialog::modelSelected,this,[this,dialog](const QString &path,const QString &name){
-        if(server.state()!=QProcess::NotRunning||fit.state()!=QProcess::NotRunning||buildPage->busy()){QMessageBox::information(dialog,"Выбор модели","Остановите сервер и дождитесь завершения fit/сборки перед сменой модели.");return;}
+        if(server.state()!=QProcess::NotRunning||fit.state()!=QProcess::NotRunning||buildPage->busy()||imagePage->server()->busy()){QMessageBox::information(dialog,"Выбор модели","Остановите сервер и дождитесь завершения fit/сборки перед сменой модели.");return;}
         if(auto p=config.find(name)){p->value=path;p->enabled=true;navigation->setCurrentRow(1);rebuild();updatePreview();status->setText("Выбрано "+name+": "+QFileInfo(path).fileName());}
     });dialog->show();
 }
@@ -319,7 +329,7 @@ QUrl MainWindow::endpoint() const {
     QUrl url; url.setScheme(config.find("--ssl-cert-file") && config.find("--ssl-cert-file")->enabled ? "https" : "http"); url.setHost(host); url.setPort(val("--port", "9931").toInt()); url.setPath(val("--api-prefix", "") + "/"); return url;
 }
 void MainWindow::launchServer() {
-    if (server.state() != QProcess::NotRunning || fit.state() != QProcess::NotRunning||buildPage->busy()) return;
+    if (server.state() != QProcess::NotRunning || fit.state() != QProcess::NotRunning||buildPage->busy()||imagePage->server()->busy()||engineSelector->currentIndex()!=0||closeConfirmed) return;
     bool router = config.find("--models-dir") && config.find("--models-dir")->enabled;
     bool remote = (config.find("--hf-repo") && config.find("--hf-repo")->enabled) || (config.find("--model-url") && config.find("--model-url")->enabled);
     if (!router && !remote && !validateModel()) return;
@@ -333,7 +343,14 @@ void MainWindow::launchServer() {
     QString modelName="llama.cpp";if(router)modelName="Router llama.cpp";else if(auto p=config.find("--model")){if(p->enabled)modelName=QFileInfo(p->value.toString()).fileName();}if(remote)modelName="Удалённая модель llama.cpp";performance.start(modelName);
     server.setWorkingDirectory(QFileInfo(exe.path).absolutePath()); server.setProgram(exe.path); server.setArguments(args); status->setText("Запуск сервера…"); log("\n[Запуск сервера]\n"); server.start(); updateButtons();
 }
+void MainWindow::launchImageServer() {
+    if(server.state()!=QProcess::NotRunning||fit.state()!=QProcess::NotRunning||buildPage->busy()||imagePage->server()->busy()||engineSelector->currentIndex()!=1||closeConfirmed)return;
+    if(!imagePage->validate())return;
+    const auto limits=config.metadata.value("gpuPowerLimits").toObject();if(!powerReady&&!limits.isEmpty()){if(launchAfterPower)return;launchAfterPower=true;launchImageAfterPower=true;power.applyProfile(limits);status->setText("Применение лимитов GPU…");updateButtons();return;}
+    imagePage->setBlocked(false);imagePage->start();updateButtons();
+}
 void MainWindow::launchFit() {
+    if(imagePage->server()->busy()||engineSelector->currentIndex()!=0||closeConfirmed)return;
     if (server.state() != QProcess::NotRunning || fit.state() != QProcess::NotRunning||buildPage->busy() || !validateModel()) return;
     auto exe = findExecutable(config.directory, true); if (exe.path.isEmpty()) { error("Не найден llama-fit-params (или llama fit-params). Установите сборку llama.cpp с этой утилитой."); return; }
     QStringList args = exe.prefix; args << "--model" << config.find("--model")->value.toString() << "--ctx-size" << QString::number(config.fitContext);
@@ -372,16 +389,16 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     if(closeQuestionOpen){event->ignore();return;}
     if(!closeConfirmed){
         closeQuestionOpen=true;
-        QMessageBox question(QMessageBox::Question,"Завершить работу","Закрыть Llama Studio? Сервер и fit будут остановлены, модель выгружена, активная сборка отменена.",QMessageBox::NoButton,this);question.setObjectName("exitConfirmation");
+        QMessageBox question(QMessageBox::Question,"Завершить работу","Закрыть Llama Studio? Серверы llama.cpp и sd-server, а также fit будут остановлены, модели выгружены, активная сборка отменена.",QMessageBox::NoButton,this);question.setObjectName("exitConfirmation");
         auto yes=new StudioButton("Да");yes->setObjectName("exitYes");auto no=new StudioButton("Нет");no->setObjectName("exitNo");question.addButton(yes,QMessageBox::YesRole);question.addButton(no,QMessageBox::NoRole);question.setDefaultButton(no);question.setEscapeButton(no);question.exec();closeQuestionOpen=false;
         if(question.clickedButton()!=yes){event->ignore();return;}
-        closeConfirmed=true;launchAfterPower=false;stopping=true;fitCanceled=true;healthTimer.stop();centralWidget()->setEnabled(false);for(auto dialog:findChildren<QDialog*>())dialog->setEnabled(false);
+        closeConfirmed=true;launchAfterPower=false;launchImageAfterPower=false;stopping=true;fitCanceled=true;healthTimer.stop();centralWidget()->setEnabled(false);for(auto dialog:findChildren<QDialog*>())dialog->setEnabled(false);
     }
     if(buildPage->busy()){closeAfterBuild=true;buildPage->cancel();event->ignore();return;}
-    if (server.state() != QProcess::NotRunning || fit.state() != QProcess::NotRunning) {
-        server.killTree();fit.killTree();event->ignore();QTimer::singleShot(50,this,&QWidget::close);return;
+    if (server.state() != QProcess::NotRunning || fit.state() != QProcess::NotRunning||imagePage->server()->busy()) {
+        server.killTree();fit.killTree();imagePage->server()->kill();event->ignore();QTimer::singleShot(50,this,&QWidget::close);return;
     }
-    server.killTree();fit.killTree();
+    server.killTree();fit.killTree();imagePage->server()->kill();
     if(!powerResetDone&&power.needsReset()){event->ignore();if(!powerResetStarted){powerResetStarted=true;power.restoreAllDefaults();}return;}
     for(auto dialog:findChildren<QDialog*>(QString(),Qt::FindDirectChildrenOnly))dialog->close();
     event->accept();

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "rootDirectory": ".",
+  "executablePath": "runtime/sd-server.exe",
+  "modelDirectory": "models",
+  "listenIp": "127.0.0.1",
+  "port": 9940,
+  "selectedProfile": "sd21",
+  "profiles": [
+    {
+      "id": "sd21", "name": "SD 2.1 Q8",
+      "note": "Шаблон SD 2.1: выберите совместимый файл модели. Для полного checkpoint энкодер и VAE могут быть включены в веса. Начните с 512×512 и проверьте генерацию.",
+      "modelMode": "checkpoint",
+      "model": "models/stable_diffusion-ema-pruned-v2-1_768.q8_0.gguf",
+      "llm": "", "vae": "", "requiredComponents": [],
+      "backend": "", "maxVram": "0", "offloadToCpu": true, "vaeTiling": true,
+      "width": 512, "height": 512, "steps": 20, "cfgScale": 7,
+      "seed": "42", "samplingMethod": "euler", "scheduler": "", "threads": -1,
+      "extraArguments": []
+    },
+    {
+      "id": "flux3", "name": "FLUX.3 Image Klein Q8",
+      "note": "Шаблон FLUX.3 Image Klein: выберите совместимые веса, полный Qwen3-VL 4B и FLUX.2 VAE. CPU-энкодер экономит VRAM, но работает медленнее. Проверьте совместимость компонентов.",
+      "modelMode": "diffusion",
+      "model": "models/flux3_image_klein_sd-Q8_0.gguf",
+      "llm": "text-encoders/Qwen3VL-4B-Instruct-Q4_K_M.gguf", "vae": "vae/flux2-vae.safetensors",
+      "requiredComponents": ["llm", "vae"],
+      "backend": "te=cpu", "maxVram": "0", "offloadToCpu": true, "vaeTiling": true,
+      "width": 512, "height": 512, "steps": 16, "cfgScale": 1,
+      "seed": "42", "samplingMethod": "euler", "scheduler": "", "threads": -1,
+      "extraArguments": []
+    },
+    {
+      "id": "qwen21", "name": "Qwen Image 2.1 UC Q6_K",
+      "note": "Шаблон Qwen Image 2.1: выберите совместимые веса, полный Qwen3-VL 8B и VAE именно версии 2.1. CPU-энкодер снижает нагрузку на видеопамять. Проверьте генерацию на своём оборудовании.",
+      "modelMode": "diffusion",
+      "model": "models/qwen-image-2.1-UC-Q6_K.gguf",
+      "llm": "text-encoders/Qwen3VL-8B-Instruct-Q4_K_M.gguf", "vae": "vae/qwen_image_2.1_vae_bf16.safetensors",
+      "requiredComponents": ["llm", "vae"],
+      "backend": "te=cpu", "maxVram": "0", "offloadToCpu": true, "vaeTiling": true,
+      "width": 512, "height": 512, "steps": 20, "cfgScale": 6,
+      "seed": "42", "samplingMethod": "euler", "scheduler": "", "threads": -1,
+      "extraArguments": []
+    }
+  ]
+}

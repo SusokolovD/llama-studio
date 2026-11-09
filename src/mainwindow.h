@@ -18,6 +18,9 @@ class QLabel;
 class QPushButton;
 class QVBoxLayout;
 class BuilderPage;
+class ImagePage;
+class QComboBox;
+class QStackedWidget;
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
@@ -31,7 +34,7 @@ private:
     ManagedProcess server, fit;
     ModelPerformance performance;
     GpuPowerService power;
-    bool launchAfterPower=false,powerReady=false,powerResetStarted=false,powerResetDone=false;
+    bool launchAfterPower=false,launchImageAfterPower=false,powerReady=false,powerResetStarted=false,powerResetDone=false;
     QNetworkAccessManager network;
     ReleaseChecker releases;
     QTimer healthTimer;
@@ -45,6 +48,9 @@ private:
     QPushButton *startButton, *stopButton, *fitButton, *cancelFitButton, *openButton;
     QWidget *editor;
     BuilderPage *buildPage=nullptr;
+    ImagePage *imagePage=nullptr;
+    QComboBox *engineSelector=nullptr;
+    QStackedWidget *enginePages=nullptr;
     bool closeAfterBuild=false;
     bool closeConfirmed=false,closeQuestionOpen=false;
     QByteArray fitOutput, serverPending, serverErrorPending, fitPending, fitErrorPending;
@@ -65,6 +71,7 @@ private:
     void showModels();
     void showMonitor();
     void launchServer();
+    void launchImageServer();
     void launchFit();
     void stop(QProcess &process);
     void pollHealth();

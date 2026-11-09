@@ -8,17 +8,49 @@
 #include "modelpicker.h"
 #include "modelcache.h"
 #include "gpupowerdialog.h"
+#include "imagepage.h"
+#include "imagecatalogdialog.h"
+#include "image_test_assets.h"
 #include <QtTest>
 #include <QtWidgets>
 #include <QTcpServer>
 #include <QTemporaryDir>
 #include <QSslSocket>
 #include <QTcpSocket>
+class UrlRecorder:public QObject {
+    Q_OBJECT
+public:
+    QUrl url;
+public slots:
+    void open(const QUrl &value){url=value;}
+};
 class GuiTest : public QObject {
     Q_OBJECT
     QTemporaryDir settingsDirectory;
     void answerExit(bool yes){QTimer::singleShot(0,qApp,[yes]{auto box=qobject_cast<QMessageBox*>(QApplication::activeModalWidget());QVERIFY(box);auto button=box->findChild<QPushButton*>(yes?"exitYes":"exitNo");QVERIFY(button);QTest::mouseClick(button,Qt::LeftButton,Qt::NoModifier,QPoint(2,button->height()/2));});}
 private slots:
+    void imageCatalogSelectionAndMultiGpuFit(){
+        QTemporaryDir dir;const auto model=dir.filePath("random/a.gguf"),encoder=dir.filePath("another/b.gguf"),vae=dir.filePath("mixed/c.safetensors");QVERIFY(imageGgufFixture(model,{{"general.architecture","flux"}},{{"content_mode_blocks.image.0.q_proj.weight",{3072,3072}},{"txt_in.weight",{20480,3072}}}));QVERIFY(imageGgufFixture(encoder,{{"general.architecture","qwen3vl"},{"qwen3vl.embedding_length",2560}},{{"token_embd.weight",{2560,151936}}}));QVERIFY(imageSafeFixture(vae,{{"decoder.conv_in.weight",{512,32,3,3}},{"bn.running_mean",{128}}}));
+        auto settings=ImageSettings::fromJson({});settings.modelDirectory=dir.path();settings.executablePath=dir.filePath("sd-server.exe");QVERIFY(QFile::copy(FIXTURE_PATH,settings.executablePath));ImageCatalog catalog;QString error;catalog.scan(dir.path(),[]{return false;},[](int,const QString &){},&error);QVERIFY2(error.isEmpty(),qPrintable(error));
+        ImageCatalogDialog first(settings);first.show();auto apply=first.findChild<QPushButton*>("imageApplyFit");QVERIFY(apply->isEnabled());QCOMPARE(first.findChild<QComboBox*>("imageCatalogEncoder")->currentData().toString(),encoder);QCOMPARE(first.findChild<QComboBox*>("imageCatalogVae")->currentData().toString(),vae);QCOMPARE(first.findChild<QTableWidget*>("imageCatalogTable")->rowCount(),3);first.close();
+        QVERIFY(QFile::copy(encoder,dir.filePath("alternative.gguf")));catalog.scan(dir.path(),[]{return false;},[](int,const QString &){},&error);ImageCatalogDialog dialog(settings);dialog.show();auto encoders=dialog.findChild<QComboBox*>("imageCatalogEncoder");apply=dialog.findChild<QPushButton*>("imageApplyFit");QCOMPARE(encoders->count(),3);QVERIFY(!apply->isEnabled());encoders->setCurrentIndex(1);QVERIFY(apply->isEnabled());dialog.findChild<QComboBox*>("imageFitDeviceMode")->setCurrentIndex(1);QVERIFY(!apply->isEnabled());dialog.findChild<QPushButton*>("imageDetectDevices")->click();auto devices=dialog.findChild<QListWidget*>("imageFitDevices");QTRY_COMPARE(devices->count(),2);devices->item(0)->setCheckState(Qt::Checked);devices->item(1)->setCheckState(Qt::Checked);QVERIFY(apply->isEnabled());if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR")){dialog.resize(1280,1050);QTest::qWait(100);dialog.grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/image-fit-preview.png");}apply->click();QCOMPARE(dialog.result(),int(QDialog::Accepted));auto result=dialog.resultSettings();QCOMPARE(result.modelDirectory,dir.path());QCOMPARE(result.profile().value("model").toString(),model);QCOMPARE(result.profile().value("autoFit").toString(),QString("on"));QCOMPARE(result.profile().value("maxVram").toString(),QString("Vulkan0=-1.000,Vulkan1=-1.000"));QString exe;QStringList args;QUrl url;QVERIFY2(result.command(&exe,&args,&url,&error),qPrintable(error));QVERIFY(args.contains("--auto-fit"));
+        ImagePage page;page.loadSettings(result.toJson());QCOMPARE(page.findChild<QComboBox*>("imageAutoFit")->currentData().toString(),QString("on"));QCOMPARE(page.settings().profile().value("backend").toString(),QString("diffusion=Vulkan0&Vulkan1,te=cpu,vae=Vulkan0"));
+        QSignalSpy changed(&page,&ImagePage::settingsChanged);QTimer::singleShot(0,qApp,[]{auto active=qobject_cast<ImageCatalogDialog*>(QApplication::activeModalWidget());QVERIFY(active);active->findChild<QComboBox*>("imageCatalogEncoder")->setCurrentIndex(1);active->findChild<QPushButton*>("imageApplyFit")->click();});page.findChild<QPushButton*>("imageAutoSelect")->click();QCOMPARE(changed.size(),1);QCOMPARE(page.settings().profile().value("model").toString(),model);
+    }
+    void imageProfilesProcessAndRestore(){
+        QTemporaryDir dir;QDir().mkpath(dir.filePath("models"));const auto model=dir.filePath("models/image model.gguf");QFile file(model);QVERIFY(file.open(QIODevice::WriteOnly));file.write("fixture weights");file.close();QTcpServer probe;QVERIFY(probe.listen(QHostAddress::LocalHost,0));const auto port=probe.serverPort();probe.close();
+        MainWindow window(nullptr,false,false);window.show();window.engineSelector->setCurrentIndex(1);auto page=window.imagePage;page->findChild<QLineEdit*>("imageRoot")->setText(dir.path());page->findChild<QLineEdit*>("imageExecutable")->setText(FIXTURE_PATH);page->findChild<QLineEdit*>("imageModel")->setText(model);page->findChild<QSpinBox*>("imagePort")->setValue(port);page->findChild<QSpinBox*>("image:steps")->setValue(24);
+        QString error;const auto profile=dir.filePath("profile.json");QVERIFY(window.saveProfile(profile,&error));auto open=page->findChild<QPushButton*>("imageOpenWeb");QVERIFY(!open->isEnabled());page->findChild<QPushButton*>("imageStart")->click();QTRY_VERIFY(page->server()->ready());QVERIFY(open->isEnabled());QVERIFY(!window.engineSelector->isEnabled());QVERIFY(!window.startButton->isEnabled());QVERIFY(!window.fitButton->isEnabled());QVERIFY(page->findChild<QPlainTextEdit*>("imageRunningCommand")->toPlainText().contains("--listen-port"));
+        window.launchServer();window.launchFit();QCOMPARE(window.server.state(),QProcess::NotRunning);QCOMPARE(window.fit.state(),QProcess::NotRunning);QVERIFY(!window.loadProfile(profile,&error));
+        UrlRecorder recorder;QDesktopServices::setUrlHandler("http",&recorder,"open");open->click();QDesktopServices::unsetUrlHandler("http");QCOMPARE(recorder.url,page->server()->url());QTRY_VERIFY(page->findChild<QPlainTextEdit*>("imageConsole")->toPlainText().contains(QString::fromUtf8("Журнал изображений")));
+        page->findChild<QPushButton*>("imageStop")->click();QTRY_VERIFY(!page->server()->busy());QVERIFY(!open->isEnabled());QVERIFY(window.engineSelector->isEnabled());page->findChild<QPushButton*>("imageStart")->click();QTRY_VERIFY(page->server()->ready());answerExit(true);window.close();QTRY_VERIFY(!window.isVisible());QVERIFY(!page->server()->busy());
+        MainWindow restored(nullptr,false,true);QCOMPARE(restored.engineSelector->currentIndex(),1);QCOMPARE(restored.imagePage->settings().rootDirectory,dir.path());QCOMPARE(restored.imagePage->settings().profile().value("steps").toInt(),24);QCOMPARE(restored.imagePage->settings().port,int(port));QVERIFY(!restored.imagePage->server()->busy());
+        QFile catalog(":/parameters.json");QVERIFY(catalog.open(QIODevice::ReadOnly));QFile custom(dir.filePath("catalog.json"));QVERIFY(custom.open(QIODevice::WriteOnly));custom.write(catalog.readAll());custom.close();QVERIFY(restored.loadProfile(custom.fileName(),&error,true));QCOMPARE(restored.engineSelector->currentIndex(),1);QCOMPARE(restored.imagePage->settings().rootDirectory,dir.path());QSettings().remove("lastProfilePath");
+    }
+    void imageIncompleteComponentsAndScreenshot(){
+        MainWindow window(nullptr,false,false);window.show();window.engineSelector->setCurrentIndex(1);auto page=window.imagePage;auto profiles=page->findChild<QComboBox*>("imageProfile");profiles->setCurrentIndex(profiles->findData("flux3"));page->findChild<QPushButton*>("imageStart")->click();QVERIFY(!page->server()->busy());QVERIFY(!page->validate());QVERIFY(page->findChild<QLabel*>("imageComponents")->text().contains(QString::fromUtf8("энкодер")));
+        profiles->setCurrentIndex(0);QApplication::processEvents();for(auto button:window.findChildren<QPushButton*>())if(button->text()==QString::fromUtf8("Открыть конфиг"))QVERIFY(button->height()>=button->fontMetrics().height()+12);if(qEnvironmentVariableIsSet("STUDIO_SCREENSHOT_DIR")){window.resize(1440,1100);QTest::qWait(150);window.grab().save(qEnvironmentVariable("STUDIO_SCREENSHOT_DIR")+"/image-preview.png");}answerExit(true);window.close();
+    }
     void modelTypeFilteringAndOverrides(){
         QTemporaryDir dir;const auto main=dir.filePath("main.gguf");QFile file(main);QVERIFY(file.open(QIODevice::WriteOnly));QDataStream stream(&file);stream.setByteOrder(QDataStream::LittleEndian);stream.writeRawData("GGUF",4);stream<<quint32(3)<<quint64(0)<<quint64(0);file.close();for(const auto &name:QStringList{"mmproj-vision.gguf","draft-small.gguf","extra-normal.gguf"})QVERIFY(QFile::copy(main,dir.filePath(name)));
         ModelLibraryDialog dialog(dir.path());dialog.show();auto table=dialog.findChild<QTableWidget*>("modelLibraryTable");auto type=dialog.findChild<QComboBox*>("modelLibraryRole");QTRY_COMPARE(table->rowCount(),4);QTRY_VERIFY(dialog.findChild<QLabel*>("modelLibraryStatus")->text().contains(QString::fromUtf8("завершено")));auto visible=[&]{int n=0;for(int r=0;r<table->rowCount();++r)n+=!table->isRowHidden(r);return n;};QCOMPARE(type->count(),4);QVERIFY(type->currentData().toString().isEmpty());QCOMPARE(visible(),4);type->setCurrentIndex(type->findData("--model"));QCOMPARE(visible(),2);type->setCurrentIndex(type->findData("--mmproj"));QCOMPARE(visible(),1);type->setCurrentIndex(type->findData("--spec-draft-model"));QCOMPARE(visible(),1);type->setCurrentIndex(0);QCOMPARE(visible(),4);

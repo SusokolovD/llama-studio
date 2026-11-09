@@ -42,7 +42,23 @@ int main(int argc, char **argv) {
         QFile dll(QDir(dir).filePath("zz-runtime.dll"));if(!dll.open(QIODevice::WriteOnly))return 46;dll.write("new runtime");return 0;
     }
     if (args.contains("--version")) {QFile output("fixture-version.txt");if(output.open(QIODevice::ReadOnly)){const auto bytes=output.readAll();fwrite(bytes.constData(),1,size_t(bytes.size()),stdout);}else printf("version: 42 (fixture)\n"); return 0; }
-    if (args.contains("--list-devices")) { printf("Available devices:\n  CUDA0: Fixture A (24576 MiB, 22000 MiB free)\n  CUDA1: Fixture B (12288 MiB, 10000 MiB free)\n"); return 0; }
+    if (args.contains("--list-devices")) {if(QFileInfo(app.applicationFilePath()).baseName().startsWith("sd-server"))printf("Vulkan0\tFixture GPU A\nVulkan1\tFixture GPU B\n");else printf("Available devices:\n  CUDA0: Fixture A (24576 MiB, 22000 MiB free)\n  CUDA1: Fixture B (12288 MiB, 10000 MiB free)\n"); return 0; }
+    if(args.contains("--listen-port")){
+        auto modelIndex=args.indexOf("--model");if(modelIndex<0)modelIndex=args.indexOf("--diffusion-model");if(modelIndex<0||!QFileInfo::exists(args.value(modelIndex+1)))return 71;
+        if(args.value(modelIndex+1).contains("failure")){fprintf(stderr,"sd fixture: invalid weights\n");fflush(stderr);return 72;}
+        QTcpServer sd;
+        QObject::connect(&sd,&QTcpServer::newConnection,[&]{while(auto socket=sd.nextPendingConnection()){
+            QObject::connect(socket,&QTcpSocket::readyRead,[socket]{const auto request=socket->readAll();QByteArray body;QByteArray status="200 OK";
+                if(request.startsWith("GET /sdcpp/v1/models/status ")){QFile file("image-status.json");body=file.open(QIODevice::ReadOnly)?file.readAll():QByteArray("{\"state\":\"ready\",\"origin\":\"command_line\"}");}
+                else if(request.startsWith("GET / "))body="<html>fixture sd web UI</html>";
+                else{status="404 Not Found";body="unknown route";}
+                socket->write("HTTP/1.1 "+status+"\r\nContent-Length: "+QByteArray::number(body.size())+"\r\nConnection: close\r\n\r\n"+body);socket->disconnectFromHost();});QObject::connect(socket,&QTcpSocket::disconnected,socket,&QObject::deleteLater);
+        }});
+        if(!sd.listen(QHostAddress::LocalHost,args.value(args.indexOf("--listen-port")+1).toUShort()))return 73;
+        printf("fixture sd-server listening on port %s\n",qPrintable(args.value(args.indexOf("--listen-port")+1)));fflush(stdout);
+        const auto text=QString::fromUtf8("Журнал изображений: готово\n").toUtf8();QTimer::singleShot(40,[text]{fwrite(text.constData(),1,1,stderr);fflush(stderr);});QTimer::singleShot(80,[text]{fwrite(text.constData()+1,1,size_t(text.size()-1),stderr);fflush(stderr);});
+        return app.exec();
+    }
     int modelIndex = args.indexOf("--model");
     if (modelIndex < 0 || !QFileInfo::exists(args.value(modelIndex + 1))) return 41;
     if (args.value(modelIndex + 1).contains("failure")) { fprintf(stderr, "fixture: deliberate failure\n"); return 42; }

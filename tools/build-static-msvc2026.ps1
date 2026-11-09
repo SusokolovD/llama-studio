@@ -43,7 +43,7 @@ if ($imports -match '(?i)(Qt[56]\w*\.dll|vcruntime\w*\.dll|msvcp\w*\.dll|libssl\
 New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
 Copy-Item -LiteralPath $exe -Destination (Join-Path $outputPath 'LlamaStudio.exe') -Force
 $imports | Set-Content -LiteralPath (Join-Path $outputPath 'imports.txt') -Encoding utf8
-foreach ($relative in @('resources\parameters.json','resources\build-commands.json','resources\llama.cpp-LICENSE','README.md','ROADMAP.md','STATIC-BUILD.md','THIRD-PARTY-NOTICES.md','CHANGELOG.md')) {
+foreach ($relative in @('resources\parameters.json','resources\build-commands.json','resources\image-profiles.json','resources\llama.cpp-LICENSE','README.md','ROADMAP.md','STATIC-BUILD.md','THIRD-PARTY-NOTICES.md','CHANGELOG.md')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot $relative) -Destination $outputPath -Force
 }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'resources\licenses') -Destination $outputPath -Recurse -Force
